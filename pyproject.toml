@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "train-conductor-world-tools"
+version = "0.1.0"
+description = "A collection of tools to help with the creation and validation of manually made track networks for the Train Conductor World Map."
+authors = ["Evan Kohilas <ekohilas@users.noreply.github.com>"]
+readme = "README.md"
+packages = [{ include = "train_conductor_world_helper" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+click = "^8.1.3"
+networkx = "^3.0"
+watchdog = "^2.2.1"
+black = { extras = ["d"], version = "^23.1.0" }
+pylint = "^2.16.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

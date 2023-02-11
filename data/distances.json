@@ -1,0 +1,566 @@
+{
+  "Dijon": [
+    {
+      "name": "Lyon",
+      "distance": 5
+    },
+    {
+      "name": "Paris",
+      "distance": 7
+    },
+    {
+      "name": "Mons",
+      "distance": 8
+    },
+    {
+      "name": "Millau",
+      "distance": 11
+    },
+    {
+      "name": "Bruges",
+      "distance": 11
+    },
+    {
+      "name": "Matterhorn",
+      "distance": 12
+    },
+    {
+      "name": "Verdon",
+      "distance": 13
+    },
+    {
+      "name": "Cologne",
+      "distance": 14
+    },
+    {
+      "name": "Amsterdam",
+      "distance": 16
+    },
+    {
+      "name": "London",
+      "distance": 18
+    },
+    {
+      "name": "Bastei",
+      "distance": 20
+    },
+    {
+      "name": "Florence",
+      "distance": 21
+    },
+    {
+      "name": "Prague",
+      "distance": 21
+    },
+    {
+      "name": "Berlin",
+      "distance": 24
+    },
+    {
+      "name": "Bernina",
+      "distance": 26
+    },
+    {
+      "name": "Budapest",
+      "distance": 28
+    },
+    {
+      "name": "Edinburgh",
+      "distance": 29
+    },
+    {
+      "name": "Madrid",
+      "distance": 29
+    },
+    {
+      "name": "Copenhagen",
+      "distance": 30
+    },
+    {
+      "name": "Warsaw",
+      "distance": 33
+    },
+    {
+      "name": "Belfast",
+      "distance": 34
+    },
+    {
+      "name": "Mostar",
+      "distance": 35
+    },
+    {
+      "name": "Gothenburg",
+      "distance": 35
+    }
+  ],
+  "Grimsby": [
+    {
+      "name": "London",
+      "distance": 4
+    },
+    {
+      "name": "Edinburgh",
+      "distance": 5
+    },
+    {
+      "name": "Belfast",
+      "distance": 10
+    },
+    {
+      "name": "Amsterdam",
+      "distance": 10
+    },
+    {
+      "name": "Bruges",
+      "distance": 11
+    },
+    {
+      "name": "Paris",
+      "distance": 15
+    },
+    {
+      "name": "Mons",
+      "distance": 16
+    },
+    {
+      "name": "Cologne",
+      "distance": 18
+    },
+    {
+      "name": "Copenhagen",
+      "distance": 20
+    },
+    {
+      "name": "Berlin",
+      "distance": 22
+    },
+    {
+      "name": "Gothenburg",
+      "distance": 25
+    },
+    {
+      "name": "Millau",
+      "distance": 27
+    },
+    {
+      "name": "Lyon",
+      "distance": 29
+    },
+    {
+      "name": "Bastei",
+      "distance": 32
+    },
+    {
+      "name": "Matterhorn",
+      "distance": 36
+    },
+    {
+      "name": "Verdon",
+      "distance": 37
+    },
+    {
+      "name": "Warsaw",
+      "distance": 37
+    },
+    {
+      "name": "Prague",
+      "distance": 39
+    },
+    {
+      "name": "Madrid",
+      "distance": 43
+    },
+    {
+      "name": "Florence",
+      "distance": 45
+    },
+    {
+      "name": "Budapest",
+      "distance": 46
+    },
+    {
+      "name": "Bernina",
+      "distance": 50
+    },
+    {
+      "name": "Mostar",
+      "distance": 59
+    }
+  ],
+  "Hamburg": [
+    {
+      "name": "Amsterdam",
+      "distance": 5
+    },
+    {
+      "name": "Cologne",
+      "distance": 7
+    },
+    {
+      "name": "Berlin",
+      "distance": 7
+    },
+    {
+      "name": "Copenhagen",
+      "distance": 7
+    },
+    {
+      "name": "Gothenburg",
+      "distance": 12
+    },
+    {
+      "name": "Mons",
+      "distance": 13
+    },
+    {
+      "name": "Bruges",
+      "distance": 14
+    },
+    {
+      "name": "London",
+      "distance": 15
+    },
+    {
+      "name": "Bastei",
+      "distance": 17
+    },
+    {
+      "name": "Edinburgh",
+      "distance": 20
+    },
+    {
+      "name": "Paris",
+      "distance": 22
+    },
+    {
+      "name": "Warsaw",
+      "distance": 22
+    },
+    {
+      "name": "Prague",
+      "distance": 24
+    },
+    {
+      "name": "Belfast",
+      "distance": 25
+    },
+    {
+      "name": "Lyon",
+      "distance": 26
+    },
+    {
+      "name": "Matterhorn",
+      "distance": 27
+    },
+    {
+      "name": "Verdon",
+      "distance": 30
+    },
+    {
+      "name": "Budapest",
+      "distance": 31
+    },
+    {
+      "name": "Millau",
+      "distance": 34
+    },
+    {
+      "name": "Florence",
+      "distance": 38
+    },
+    {
+      "name": "Bernina",
+      "distance": 43
+    },
+    {
+      "name": "Madrid",
+      "distance": 52
+    },
+    {
+      "name": "Mostar",
+      "distance": 52
+    }
+  ],
+  "Marseille": [
+    {
+      "name": "Verdon",
+      "distance": 4
+    },
+    {
+      "name": "Millau",
+      "distance": 8
+    },
+    {
+      "name": "Lyon",
+      "distance": 10
+    },
+    {
+      "name": "Florence",
+      "distance": 10
+    },
+    {
+      "name": "Matterhorn",
+      "distance": 15
+    },
+    {
+      "name": "Madrid",
+      "distance": 16
+    },
+    {
+      "name": "Bernina",
+      "distance": 17
+    },
+    {
+      "name": "Paris",
+      "distance": 20
+    },
+    {
+      "name": "Mons",
+      "distance": 23
+    },
+    {
+      "name": "Bruges",
+      "distance": 24
+    },
+    {
+      "name": "Mostar",
+      "distance": 26
+    },
+    {
+      "name": "Cologne",
+      "distance": 27
+    },
+    {
+      "name": "London",
+      "distance": 31
+    },
+    {
+      "name": "Amsterdam",
+      "distance": 31
+    },
+    {
+      "name": "Bastei",
+      "distance": 33
+    },
+    {
+      "name": "Prague",
+      "distance": 34
+    },
+    {
+      "name": "Berlin",
+      "distance": 37
+    },
+    {
+      "name": "Budapest",
+      "distance": 41
+    },
+    {
+      "name": "Edinburgh",
+      "distance": 42
+    },
+    {
+      "name": "Copenhagen",
+      "distance": 43
+    },
+    {
+      "name": "Warsaw",
+      "distance": 46
+    },
+    {
+      "name": "Belfast",
+      "distance": 47
+    },
+    {
+      "name": "Gothenburg",
+      "distance": 48
+    }
+  ],
+  "Rotterdam": [
+    {
+      "name": "Mons",
+      "distance": 3
+    },
+    {
+      "name": "Amsterdam",
+      "distance": 3
+    },
+    {
+      "name": "Bruges",
+      "distance": 4
+    },
+    {
+      "name": "Cologne",
+      "distance": 5
+    },
+    {
+      "name": "London",
+      "distance": 7
+    },
+    {
+      "name": "Berlin",
+      "distance": 11
+    },
+    {
+      "name": "Paris",
+      "distance": 12
+    },
+    {
+      "name": "Copenhagen",
+      "distance": 17
+    },
+    {
+      "name": "Edinburgh",
+      "distance": 18
+    },
+    {
+      "name": "Lyon",
+      "distance": 18
+    },
+    {
+      "name": "Bastei",
+      "distance": 19
+    },
+    {
+      "name": "Gothenburg",
+      "distance": 22
+    },
+    {
+      "name": "Belfast",
+      "distance": 23
+    },
+    {
+      "name": "Matterhorn",
+      "distance": 23
+    },
+    {
+      "name": "Millau",
+      "distance": 24
+    },
+    {
+      "name": "Verdon",
+      "distance": 24
+    },
+    {
+      "name": "Warsaw",
+      "distance": 24
+    },
+    {
+      "name": "Prague",
+      "distance": 26
+    },
+    {
+      "name": "Florence",
+      "distance": 32
+    },
+    {
+      "name": "Budapest",
+      "distance": 33
+    },
+    {
+      "name": "Bernina",
+      "distance": 37
+    },
+    {
+      "name": "Madrid",
+      "distance": 42
+    },
+    {
+      "name": "Mostar",
+      "distance": 46
+    }
+  ],
+  "Stuttgart": [
+    {
+      "name": "Cologne",
+      "distance": 8
+    },
+    {
+      "name": "Mons",
+      "distance": 10
+    },
+    {
+      "name": "Bastei",
+      "distance": 10
+    },
+    {
+      "name": "Paris",
+      "distance": 11
+    },
+    {
+      "name": "Prague",
+      "distance": 11
+    },
+    {
+      "name": "Berlin",
+      "distance": 12
+    },
+    {
+      "name": "Bruges",
+      "distance": 15
+    },
+    {
+      "name": "Lyon",
+      "distance": 15
+    },
+    {
+      "name": "Amsterdam",
+      "distance": 16
+    },
+    {
+      "name": "Matterhorn",
+      "distance": 16
+    },
+    {
+      "name": "Budapest",
+      "distance": 18
+    },
+    {
+      "name": "Copenhagen",
+      "distance": 18
+    },
+    {
+      "name": "Verdon",
+      "distance": 19
+    },
+    {
+      "name": "Warsaw",
+      "distance": 21
+    },
+    {
+      "name": "London",
+      "distance": 22
+    },
+    {
+      "name": "Millau",
+      "distance": 23
+    },
+    {
+      "name": "Gothenburg",
+      "distance": 23
+    },
+    {
+      "name": "Florence",
+      "distance": 27
+    },
+    {
+      "name": "Bernina",
+      "distance": 32
+    },
+    {
+      "name": "Edinburgh",
+      "distance": 33
+    },
+    {
+      "name": "Belfast",
+      "distance": 38
+    },
+    {
+      "name": "Madrid",
+      "distance": 41
+    },
+    {
+      "name": "Mostar",
+      "distance": 41
+    }
+  ]
+}
