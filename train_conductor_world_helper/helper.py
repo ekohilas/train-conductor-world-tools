@@ -65,9 +65,13 @@ class Helper:
             world_data=self.world_data,
             graph=graph,
         )
+        map_graph = graphing.graph.MapGraph(
+            tile_map=self.world_map.tile_map,
+        )
         self.annotator = annotations.annotator.Annotator(
             tiled_map=tiled_map,
             world_data=self.world_data,
+            map_graph=map_graph,
             paths=self.paths,
         )
 
@@ -93,4 +97,5 @@ class Helper:
 
     def _annotations(self) -> None:
         self.annotator.annotate_connections()
+        self.annotator.annotate_areas()
         self.annotator.save()

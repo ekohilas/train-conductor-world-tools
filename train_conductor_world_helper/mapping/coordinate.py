@@ -22,7 +22,7 @@ class Coordinate:
     y: int
 
     def __post_init__(self):
-        # Ensures values are converted to floats.
+        # Ensures values are converted to ints.
         object.__setattr__(self, "x", int(self.x))
         object.__setattr__(self, "y", int(self.y))
 
@@ -51,6 +51,26 @@ class Coordinate:
         """Returns nodes along the edges of the coordinate."""
         return frozenset(self._direction_to_node.values())
 
+    @staticmethod
+    def _neighboring_nodes(
+        x: int | float,
+        y: int | float,
+        delta: float | int = 1,
+    ) -> list[(_CardinalDirection, Node)]:
+        neighboring_nodes = []
+        for direction in _CardinalDirection:
+            x_offset, y_offset = direction.value
+            neighboring_nodes.append(
+                (
+                    direction,
+                    Node(
+                        x=x + x_offset * delta,
+                        y=y + y_offset * delta,
+                    ),
+                )
+            )
+        return neighboring_nodes
+
     @functools.cached_property
     def _direction_to_node(self) -> dict[_CardinalDirection, Node]:
         """
@@ -66,6 +86,19 @@ class Coordinate:
                 y=self.y + y_offset * delta,
             )
         return direction_to_node
+
+    @functools.cached_property
+    def neighbor_nodes(self) -> set[Node]:
+        """
+        Returns the neighbouring coordinates for each cardinal direction.
+        """
+        return set(
+            node
+            for _, node in Coordinate._neighboring_nodes(
+                x=self.x,
+                y=self.y,
+            )
+        )
 
     def __str__(self):
         return f"({self.x}, {self.y})"

@@ -20,19 +20,19 @@ class Paths:
     """Represents the paths of connections within the train conductor world mapping."""
 
     def __init__(
-        self,
-        world_map: mapping.world.World,
-        world_data: data.Data,
-        graph: graphing.graph.Graph,
+            self,
+            world_map: mapping.world.World,
+            world_data: data.Data,
+            graph: graphing.graph.Graph,
     ):
         self.world_map = world_map
         self.graph = graph
         self.world_data = world_data
 
     def distance_between(
-        self,
-        port_name: str,
-        city_name: str,
+            self,
+            port_name: str,
+            city_name: str,
     ) -> int:
         """Returns the calculated distance from the given port to the given city."""
         return len(
@@ -43,17 +43,17 @@ class Paths:
         )
 
     def _path(
-        self,
-        port_name: str,
-        city_name: str,
+            self,
+            port_name: str,
+            city_name: str,
     ) -> list[graphing.edge.Edge]:
         return self._min_paths_dict[port_name][city_name]
 
     @functools.cache
     def connection_path(
-        self,
-        port_name: str,
-        city_name: str,
+            self,
+            port_name: str,
+            city_name: str,
     ) -> dict[mapping.coordinate.Coordinate, PathComponent]:
         """
         Returns the coordinates and path components from the port to the city.
@@ -84,7 +84,7 @@ class Paths:
         for port_name in world_data.port_names:
             port_edge_nodes = tile_map.coordinate_of(port_name).edge_nodes
             for city_name in world_data.city_names_from(
-                port_name=port_name,
+                    port_name=port_name,
             ):
                 city_edge_nodes = tile_map.coordinate_of(city_name).edge_nodes
                 node_paths = self._collate_paths(
@@ -130,10 +130,53 @@ class Paths:
 
         return paths_dict
 
+    @functools.cached_property
+    def _min_valid_paths_dict(self) -> dict[str, dict[str, list[list[Edge]]]]:
+        world_data = self.world_data
+
+        tile_map = self.world_map.tile_map
+
+        paths_dict = collections.defaultdict(dict)
+        for port_name in world_data.port_names:
+            port_edge_nodes = tile_map.coordinate_of(port_name).edge_nodes
+            for city_name in world_data.city_names_from(
+                    port_name=port_name,
+            ):
+                city_edge_nodes = tile_map.coordinate_of(city_name).edge_nodes
+                node_paths = self._collate_paths(
+                    port_edge_nodes=port_edge_nodes,
+                    city_edge_nodes=city_edge_nodes,
+                )
+                valid_paths = []
+                for min_node_path in node_paths:
+                    min_edge_path = Paths._create_edges(
+                        zip(min_node_path, min_node_path[1:])
+                    )
+                    if not Paths._invalid_path(path=min_edge_path):
+                        valid_paths.append(min_edge_path)
+
+                min_valid_path_length = min(
+                    map(len, valid_paths),
+                    default=[],
+                )
+                min_valid_paths = [
+                    valid_path
+                    for valid_path in valid_paths
+                    if len(valid_path) == min_valid_path_length
+                ]
+
+                paths_dict[port_name][city_name] = min_valid_paths
+
+        return paths_dict
+
+    def valid_min_paths(self, port_name: str, city_name: str, ) -> list[list[Edge]]:
+        return self._min_valid_paths_dict[port_name][city_name]
+
+    @functools.cache
     def _collate_paths(
-        self,
-        port_edge_nodes: frozenset[Node],
-        city_edge_nodes: frozenset[Node],
+            self,
+            port_edge_nodes: frozenset[Node],
+            city_edge_nodes: frozenset[Node],
     ) -> list[list[Node]]:
         all_paths = []
         for port_edge_node in port_edge_nodes:
@@ -159,6 +202,6 @@ class Paths:
 
     @staticmethod
     def _create_edges(
-        edges: typing.Iterable[tuple[Node, Node]],
+            edges: typing.Iterable[tuple[Node, Node]],
     ) -> list[Edge]:
         return [Edge(edge) for edge in edges]
