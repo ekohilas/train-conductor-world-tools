@@ -18,13 +18,13 @@ class ConnectionTileLayerAnnotator(annotations.base_annotators.TileLayerAnnotato
     city_name: str
 
     def coordinate_to_connection_component(
-        self, coordinate: mapping.coordinate.Coordinate
+            self, coordinate: mapping.coordinate.Coordinate
     ) -> PathComponent:
         raise NotImplementedError
 
     def coordinate_to_tile_id(
-        self,
-        coordinate: mapping.coordinate.Coordinate,
+            self,
+            coordinate: mapping.coordinate.Coordinate,
     ) -> int:
         connection_component = self.coordinate_to_connection_component(
             coordinate=coordinate,
@@ -45,7 +45,7 @@ class CityToPortConnectionAnnotator(ConnectionTileLayerAnnotator):
 
     @functools.cached_property
     def _coordinate_to_merged_path_component(
-        self,
+            self,
     ) -> dict[mapping.coordinate.Coordinate, PathComponent,]:
         city_name = self.city_name
         city_coordinate_to_path_components = {}
@@ -58,8 +58,8 @@ class CityToPortConnectionAnnotator(ConnectionTileLayerAnnotator):
         return city_coordinate_to_path_components
 
     def coordinate_to_connection_component(
-        self,
-        coordinate: mapping.coordinate.Coordinate,
+            self,
+            coordinate: mapping.coordinate.Coordinate,
     ) -> PathComponent:
         return self._coordinate_to_merged_path_component[coordinate]
 
@@ -72,7 +72,7 @@ class CityConnectionsAnnotator(annotations.base_annotators.GroupLayerAnnotator):
     paths: graphing.pathing.paths.Paths
 
     def child_annotators(
-        self,
+            self,
     ) -> typing.Iterable[annotations.base_annotators.LayerAnnotator]:
         return (
             CityToPortConnectionAnnotator(
@@ -98,7 +98,7 @@ class PortToCityConnectionAnnotator(ConnectionTileLayerAnnotator):
 
     @functools.cached_property
     def _coordinate_to_path_component(
-        self,
+            self,
     ) -> dict[mapping.coordinate.Coordinate, PathComponent,]:
         return self.paths.connection_path(
             port_name=self.port_name,
@@ -106,8 +106,8 @@ class PortToCityConnectionAnnotator(ConnectionTileLayerAnnotator):
         )
 
     def coordinate_to_connection_component(
-        self,
-        coordinate: mapping.coordinate.Coordinate,
+            self,
+            coordinate: mapping.coordinate.Coordinate,
     ) -> PathComponent:
         return self._coordinate_to_path_component[coordinate]
 
@@ -121,7 +121,7 @@ class PortConnectionAnnotator(annotations.base_annotators.GroupLayerAnnotator):
     paths: graphing.pathing.paths.Paths
 
     def child_annotators(
-        self,
+            self,
     ) -> typing.Iterable[annotations.base_annotators.LayerAnnotator]:
         return (
             PortToCityConnectionAnnotator(
@@ -134,8 +134,8 @@ class PortConnectionAnnotator(annotations.base_annotators.GroupLayerAnnotator):
                 paths=self.paths,
             )
             for city_name in self.world_data.city_names_from(
-                port_name=self.layer_name,
-            )
+            port_name=self.layer_name,
+        )
         )
 
 
@@ -147,7 +147,7 @@ class PortConnectionsAnnotator(annotations.base_annotators.GroupLayerAnnotator):
     paths: graphing.pathing.paths.Paths
 
     def child_annotators(
-        self,
+            self,
     ) -> typing.Iterable[annotations.base_annotators.LayerAnnotator]:
         return (
             PortConnectionAnnotator(
@@ -170,7 +170,7 @@ class ConnectionsAnnotator(annotations.base_annotators.GroupLayerAnnotator):
     paths: graphing.pathing.paths.Paths
 
     def child_annotators(
-        self,
+            self,
     ) -> typing.Iterable[annotations.base_annotators.LayerAnnotator]:
         city_annotator = CityConnectionsAnnotator(
             width=self.width,

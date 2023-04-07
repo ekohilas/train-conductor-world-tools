@@ -26,6 +26,11 @@ class Tile:
         """Returns whether the tile is a track."""
         return self.group == "Track"
 
+    @property
+    def is_placeable(self) -> bool:
+        """Returns whether a track can be placed on the tile."""
+        return self.name in ("Water", "Grass", "Forest")
+
     def placeable_on(self, tile: typing.Self) -> bool:
         """Returns whether the tile is placeable on the given tile."""
         if not self.is_track:
@@ -41,10 +46,10 @@ class Tile:
 
     @classmethod
     def create_tile(
-        cls,
-        id_: int,
-        coordinate: mapping.coordinate.Coordinate,
-        world_data: data.Data,
+            cls,
+            id_: int,
+            coordinate: mapping.coordinate.Coordinate,
+            world_data: data.Data,
     ) -> typing.Optional[typing.Self]:
         """Creates a tile with its required data given the tile id."""
         if id_ == 0:

@@ -1,5 +1,6 @@
 import typing
 
+import networkx
 import networkx as nx
 
 import graphing.node
@@ -15,9 +16,10 @@ class Graph:
     def __init__(
         self,
         track_map: mapping.tile_map.TileMap,
+        trackless: bool = False,
     ) -> None:
         self.track_map = track_map
-        self._create_track_graph()
+        self._create_track_graph(trackless=trackless)
 
     def all_shortest_paths(
         self,
@@ -31,10 +33,16 @@ class Graph:
             target=target_node,
         )
 
-    def _create_track_graph(self) -> None:
+    def _create_track_graph(
+        self,
+        trackless=False,
+    ) -> None:
         self.graph = nx.Graph()
         self._add_nodes_on_edges()
-        self._add_edges_for_tracks()
+        if not trackless:
+            self._add_edges_for_tracks()
+        else:
+            self.add_all_edges_to_grid_2d_graph()
 
     def _add_nodes_on_edges(self) -> None:
         """
@@ -132,3 +140,60 @@ class Graph:
                 graph.add_edge(north, south)
                 graph.add_edge(east, north)
                 graph.add_edge(east, south)
+
+
+class MapGraph:
+    """Represents the graph of the train conductor world mapping."""
+
+    def __init__(
+        self,
+        tile_map: mapping.tile_map.TileMap,
+    ) -> None:
+        self.tile_map = tile_map
+        self._create_tile_graph()
+
+    def _create_tile_graph(self) -> None:
+        self.graph = nx.grid_2d_graph(
+            m=self.tile_map.width,
+            n=self.tile_map.height,
+            # create_using=nx.DiGraph,
+        )
+        # self._remove_unplaceable_tiles()
+
+    def _remove_unplaceable_tiles(self) -> None:
+        for tile in self.tile_map:
+            coordinate = tile.coordinate.x, tile.coordinate.y
+            if tile.group == "Location":
+                for neighbor in tile.coordinate.neighbor_nodes:
+                    neighbor_coordinate = int(neighbor.x), int(neighbor.y)
+                    if not neighbor_coordinate in self.graph:
+                        continue
+                    if tile.type == "City":
+                        self.graph.remove_edge(coordinate, neighbor_coordinate)
+                    elif tile.type == "Port":
+                        self.graph.remove_edge(neighbor_coordinate, coordinate)
+            elif not tile.is_placeable:
+                self.graph.remove_node(coordinate)
+
+    def all_paths(self, port_name, city_name) -> list[list[(int, int)]]:
+        port_coordinate = self.tile_map.coordinate_of(port_name)
+        city_coordinate = self.tile_map.coordinate_of(city_name)
+        port_node = port_coordinate.x, port_coordinate.y
+        city_node = city_coordinate.x, city_coordinate.y
+        paths = networkx.all_shortest_paths(self.graph, port_node, city_node)
+        return (path[1:-1] for path in paths)
+
+    def draw_with_coordinates(self):
+        """A Debugging function to display the underlying graph network."""
+        from matplotlib import pyplot as plt
+
+        self.graph.remove_nodes_from(list(nx.isolates(self.graph)))
+        plt.gca().invert_yaxis()
+
+        nx.draw(self.graph, IdentityDict(), node_size=1)
+        plt.show()
+
+
+class IdentityDict(dict):
+    def __missing__(self, key):
+        return key
