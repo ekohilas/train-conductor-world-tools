@@ -62,7 +62,9 @@ def main(
         tiles_path=tiles_path,
     )
 
-    update_function = train_conductor_world_helper.update_map
+    def update_function():
+        train_conductor_world_helper.update_map()
+
     if auto_update:
         updater.poll_and_call_on_updates(
             filename=tmx_path,
