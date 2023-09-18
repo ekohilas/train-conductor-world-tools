@@ -5,7 +5,7 @@ import typing
 
 import networkx as nx
 
-import data
+from train_conductor_world_helper import data
 import graphing.graph
 import mapping.coordinate
 import mapping.world

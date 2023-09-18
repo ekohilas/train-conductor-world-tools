@@ -1,18 +1,36 @@
 import dataclasses
 import logging
 import os
+# import sys; print(sys.path); raise SystemExit
 
-import annotations.annotator
-import data
-
-# why does this basic import work?
+# this imports annotations correctly, and then annotations imports graphing which caches the folder for the next import graphing
+from train_conductor_world_helper.annotations import annotator
+# # make these clear so that when you see Data it's more clear what it's for
+# from train_conductor_world_helper import data
+#
+# # why does this basic import work?
+# # from train_conductor_world_helper import graphing
+# # from train_conductor_world_helper import mapping
+# from train_conductor_world_helper import stats
+import sys
+print("\n".join(sys.path))
+# sys.path[0] = "/Users/evank/Documents/train-conductor-world-tools"
+# print(sys.path)
 import graphing
+print(graphing)
+print(graphing.graph)
+print(graphing.graph.Graph)
+raise SystemExit
 import mapping
-import stats
+# import stats
 
 # but this one doesn't? Is it because they were already imported?
-import tmx.tiled_map
-import validations
+# import tmx.tiled_map
+# we have to import the module, not the folder with __init__
+from train_conductor_world_helper.tmx import tiled_map as tm
+# import tmx
+# print(tmx.__file__)
+from train_conductor_world_helper import validations
 
 PORT_LIMIT = 8
 
@@ -47,7 +65,7 @@ class Helper:
 
     def _read_map(self) -> None:
         logger.debug("Reading map...")
-        tiled_map = tmx.tiled_map.TiledMap(
+        tiled_map = tm.TiledMap(
             filename=self.tmx_path,
         )
         map_grid = tiled_map.get_layer_data(name="map")
@@ -68,7 +86,7 @@ class Helper:
         map_graph = graphing.graph.MapGraph(
             tile_map=self.world_map.tile_map,
         )
-        self.annotator = annotations.annotator.Annotator(
+        self.annotator = annotator.Annotator(
             tiled_map=tiled_map,
             world_data=self.world_data,
             map_graph=map_graph,
