@@ -4,7 +4,7 @@ import os
 # import sys; print(sys.path); raise SystemExit
 
 # this imports annotations correctly, and then annotations imports graphing which caches the folder for the next import graphing
-from train_conductor_world_helper.annotations import annotator
+# from train_conductor_world_helper.annotations import annotator
 # # make these clear so that when you see Data it's more clear what it's for
 # from train_conductor_world_helper import data
 #
@@ -12,6 +12,7 @@ from train_conductor_world_helper.annotations import annotator
 # # from train_conductor_world_helper import graphing
 # # from train_conductor_world_helper import mapping
 # from train_conductor_world_helper import stats
+from train_conductor_world_helper import graphing
 import sys
 print("\n".join(sys.path))
 # sys.path[0] = "/Users/evank/Documents/train-conductor-world-tools"
@@ -23,6 +24,12 @@ print(graphing.graph.Graph)
 raise SystemExit
 import mapping
 # import stats
+
+# how is sys.path constructed?
+
+# f(ensure code folder is in surrounding folder)
+# f(if module is not from surrounding folder, fail)
+# f(if above, set the import to import from code folder)
 
 # but this one doesn't? Is it because they were already imported?
 # import tmx.tiled_map
