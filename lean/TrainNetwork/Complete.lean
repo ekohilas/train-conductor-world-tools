@@ -271,4 +271,81 @@ theorem full_sat_port (hF : σ.Feasible I) {p : Cell} (hp : p ∈ I.ports) :
   exact ⟨full_sat_init I σ p, full_sat_reach I σ hF p, full_sat_fin I σ hF hp,
     full_sat_near I σ hF hp, full_sat_card I σ hF hp⟩
 
+open Classical in
+theorem full_sat_excess (hF : σ.Feasible I) (X : ℕ) (hX : σ.excess I ≤ X) :
+    Sat (fullAsg I σ) (atMost (vCount (Nat.pair 2 0)) X (excessItems I)) := by
+  apply atMost_complete
+  · exact counter_hv I σ _ _ (by simp [itemsOf])
+  · rw [cnt_excessItems]
+    have hle : (((((portL I).map fun p => ((cityL I).map fun c =>
+        (List.range (I.W * I.H)).countP (exPred (fullAsg I σ) p c)).sum).sum : ℕ)) : ℕ∞) ≤
+        σ.excess I := by
+      unfold Solution.excess
+      rw [sum_ports]
+      apply cast_le_list_sum
+      intro p hp
+      rw [mem_portL] at hp
+      have hch := hF.2.2.1 p hp
+      have hfil : σ.choice p = I.cities.filter (fun c => c ∈ σ.choice p) := by
+        ext c
+        simp only [Finset.mem_filter, iff_and_self]
+        exact fun h => hch.1 h
+      rw [hfil, Finset.sum_filter, sum_cities]
+      apply cast_le_list_sum
+      intro c _
+      split_ifs with hs
+      · have hnd : σ.netDist I p c < ⊤ := hF.2.2.2 p hp c hs
+        have hgd : I.gridDist p c < ⊤ := hch.2.2.1 c hs
+        obtain ⟨n, hn_eq⟩ := ENat.ne_top_iff_exists.mp (ne_of_lt hnd)
+        obtain ⟨d, hd_eq⟩ := ENat.ne_top_iff_exists.mp (ne_of_lt hgd)
+        rw [← hn_eq, ← hd_eq, ← ENat.natCast_sub]
+        refine Nat.cast_le.mpr (countP_range_le _ d n _ ?_)
+        intro t _ ht
+        simp only [exPred, full_vSel, full_vGrid, full_vNet, Bool.and_eq_true,
+          decide_eq_true_eq, Bool.not_eq_true', decide_eq_false_iff_not] at ht
+        obtain ⟨⟨_, hg⟩, hnn⟩ := ht
+        constructor
+        · have h1 : I.gridDist p c ≤ t := (I.walkDist_le_iff I.GridAdj p c t).mpr hg
+          rw [← hd_eq] at h1
+          exact_mod_cast h1
+        · by_contra hnt
+          apply hnn
+          apply (I.walkDist_le_iff σ.NetAdj p c t).mp
+          show σ.netDist I p c ≤ _
+          rw [← hn_eq]
+          exact_mod_cast (not_lt.mp hnt)
+      · have hz : (List.range (I.W * I.H)).countP (exPred (fullAsg I σ) p c) = 0 := by
+          rw [List.countP_eq_zero]
+          intro t _
+          simp [exPred, hs]
+        rw [hz]
+        simp
+    exact_mod_cast le_trans hle hX
+
+open Classical in
+theorem full_sat_tiles (K : ℕ) (hK : (σ.tiles I).card ≤ K) :
+    Sat (fullAsg I σ) (atMost (vCount (Nat.pair 3 0)) K (tileItems I)) := by
+  apply atMost_complete
+  · exact counter_hv I σ _ _ (by simp [itemsOf])
+  · rw [cnt_tileItems]
+    have : (fun x => fullAsg I σ (vTile x)) = fun x => decide (x ∈ σ.tiles I) := by
+      funext x; simp
+    rw [this, List.countP_eq_length_filter,
+      ← List.toFinset_card_of_nodup ((nodup_cells I).filter _)]
+    refine le_trans (Finset.card_le_card ?_) hK
+    intro x hx
+    simp only [List.mem_toFinset, List.mem_filter, decide_eq_true_eq] at hx
+    exact hx.2
+
+/-- Completeness: a feasible solution within the bounds gives a satisfying assignment. -/
+theorem enc_complete (X K : ℕ) (h : Decide I X K) : ∃ a, Sat a (enc I X K) := by
+  obtain ⟨σ, hF, hX, hK⟩ := h
+  exact ⟨fullAsg I σ, (sat_enc I _ X K).mpr ⟨full_sat_edge I σ hF,
+    fun p hp => full_sat_port I σ hF ((mem_portL I p).mp hp),
+    full_sat_excess I σ hF X hX, full_sat_tiles I σ K hK⟩⟩
+
+/-- The formula `enc I X K` is satisfiable iff the instance is a yes-instance. -/
+theorem enc_correct (X K : ℕ) : Decide I X K ↔ ∃ a, Sat a (enc I X K) :=
+  ⟨enc_complete I X K, fun ⟨a, h⟩ => enc_sound I a X K h⟩
+
 end TrainNetwork.Answer
