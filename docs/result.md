@@ -450,13 +450,21 @@ cities and `k = 4` (16 pairs), 12 finished within 30 s (0.01 s to 11 s) and 3 di
 CP-SAT needed at most 0.9 s on each. This is the exponential behaviour one expects.
 
 **`data/instances/europe.json`** (49×55, 1546 open cells, 2933 grid edges, 1333
-crossroads, 54 chosen pairs). The optimum is excess 2 and 210 tiles.
+crossroads, 54 chosen pairs).
+
+The optimal excess is 2: `exact` proves this. The optimal tile count at excess 2 is
+**not known to us**. The best network we have has 210 tiles (found by CP-SAT, and equal
+to the stored `data/instances/europe.solution.json`), but in our run CP-SAT did not
+prove that 210 is optimal: its lower bound after 50 minutes was 104.
 
 | Solver | Result | Wall time |
 |---|---|---|
-| CP-SAT (`python -m network_solver solve`, 4 workers) | run in progress (TBD-CPSAT) | TBD-CPSAT |
-| `exact` (`python -m network_solver exact`) | run pending (TBD-EXACT) | TBD-EXACT |
+| CP-SAT (`python -m network_solver solve --time-limit 3000`, 4 workers) | stopped at the time limit: excess 2, 210 tiles, **not proven optimal** (tile lower bound 104) | 3000 s |
+| `exact` (`python -m network_solver exact --time-limit 3600`) | TBD-EXACT | TBD-EXACT |
 | `brute` / Lean `bruteSolve` | not run: `2^2933` networks | — |
+
+The machine was running other jobs during the CP-SAT run, so its time is indicative
+only.
 
 ## 8. Differences between the Lean proof and the paper proof
 
