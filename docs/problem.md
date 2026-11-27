@@ -17,9 +17,8 @@ An instance consists of:
 
 Every other cell (not blocked, not a terminal) is **free**: it may hold a track tile.
 
-Sizes: the theory treats `W`, `H`, `|P|` and `|C|` as unbounded. A result may instead
-assume `|P| ≤ 10` and `|C| ≤ 40` when it says so explicitly. The practical benchmark is
-`W, H ≤ 100`.
+Sizes: `W`, `H`, `|P|` and `|C|` are all part of the input and unbounded. The practical
+benchmark is `W, H ≤ 100`.
 
 ## Grid distance
 
@@ -84,9 +83,7 @@ blocked cells in binary) is deliberately *not* used. With it, an instance with f
 clouds has size `O(log W)` while an optimal network can need `Θ(W)` tiles, so
 "polynomial" would be meaningless.
 
-"Faster than exponential" means running time `2^{o(N)}`. "Polynomial" means `N^{O(1)}`.
-When a result assumes `|P| ≤ 10` and `|C| ≤ 40`, the polynomial's degree may depend on
-those constants but not on `N`.
+"Polynomial" means `N^{O(1)}`.
 
 ## Why the rules are the way they are
 

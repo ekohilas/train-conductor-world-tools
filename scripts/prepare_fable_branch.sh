@@ -42,6 +42,20 @@ git checkout -q --orphan "$branch"
 git rm -rq --cached prompts scripts
 rm -rf prompts scripts
 cp "$tmp/Goal.lean" lean/TrainNetwork/Goal.lean
+# Drop README lines that mention the prompt ladder.
+python3 - <<'PY'
+lines = open("README.md").read().split("\n")
+out, skip = [], False
+for line in lines:
+    if line.startswith("* `prompts/`"):
+        skip = True
+        continue
+    if skip and line.startswith("  "):
+        continue
+    skip = False
+    out.append(line)
+open("README.md", "w").write("\n".join(out))
+PY
 printf 'import TrainNetwork.Problem\nimport TrainNetwork.Cost\nimport TrainNetwork.Goal\n' \
   > lean/TrainNetwork.lean
 git add -A
