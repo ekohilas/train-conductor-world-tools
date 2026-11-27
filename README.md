@@ -47,6 +47,11 @@ the verifier and the Lean formalisation.
   independent checker.
 * `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
 * `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
+* [`docs/result.md`](docs/result.md): a `2^{O(√N log N)}` exact algorithm for instances with
+  few ports (a layered DP over distance-label certificates), with a machine-checked proof of
+  correctness and running time in `lean/TrainNetwork/` and a paper proof.
+* `python -m network_solver solve-dp data/instances/<instance>.json`: the Python implementation
+  of that DP (`network_solver/layerdp.py`). It is exact but only practical on small grids.
 
 ## TODO
 
