@@ -1,0 +1,48 @@
+/-
+FROZEN GOAL. Do not edit. Provide the referenced definitions and lemmas in
+`TrainNetwork/Answer.lean` (and any files it imports).
+
+Claim: with at most 10 ports and at most 40 cities, the optimisation problem of
+docs/problem.md is solvable in time 2^{o(N)}, where N = W·H. Exhaustive search over
+networks takes 2^{Θ(N)}.
+-/
+import TrainNetwork.Answer
+
+namespace TrainNetwork
+
+/-- A tiny instance, used only to check that the answer is executable code. -/
+def tinyInstance : Instance where
+  W := 3
+  H := 1
+  blocked := ∅
+  ports := {(0, 0)}
+  cities := {(2, 0)}
+  k := 1
+  k_pos := by decide
+  k_le_cities := by decide
+  ports_cities := by decide
+  ports_unblocked := by decide
+  cities_unblocked := by decide
+  ports_inBounds := by decide
+  cities_inBounds := by decide
+  blocked_inBounds := by decide
+
+-- Fails to build unless `Answer.solve` is executable code.
+#eval (Answer.solve tinyInstance).time
+
+/-- On instances within the bounds, `Answer.solve` returns an optimal solution, or
+`none` exactly when no feasible solution exists. -/
+theorem goal_correct (I : Instance) (hP : I.ports.card ≤ 10) (hC : I.cities.card ≤ 40) :
+    match (Answer.solve I).val with
+    | some σ => IsOptimal I σ
+    | none => ¬ ∃ σ : Solution, σ.Feasible I :=
+  Answer.correct I hP hC
+
+/-- Sub-exponential running time: for every `ε > 0`, on all large enough instances
+within the bounds, the time is at most `2^(ε·N)`. -/
+theorem goal_subexp :
+    ∀ ε : ℝ, 0 < ε → ∃ n₀ : ℕ, ∀ I : Instance, I.ports.card ≤ 10 → I.cities.card ≤ 40 →
+      n₀ ≤ I.size → ((Answer.solve I).time : ℝ) ≤ (2 : ℝ) ^ (ε * I.size) :=
+  Answer.subexp
+
+end TrainNetwork
