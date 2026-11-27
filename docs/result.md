@@ -364,42 +364,65 @@ TrainNetwork.Goal` fails, because `TrainNetwork/Answer.lean` does not exist.
 
 `network_solver/exact.py`. It does not use CP-SAT.
 
+For a set `D` of grid edges let `d_D` be the valid-walk distance in `G − D`, let `T_D`
+be the tree union of Lemma C, and let
+`LB(D) = min_S Σ_pc (d_D(p, c) − d(p, c))` over the selections `S`. The trees of `T_D`
+use a selection that attains this minimum (the required cities and the tied cities
+nearest in `G − D`), so `LB(D)` is the excess of `T_D`.
+
 0. Compute the required and tied cities of each port. If a port reaches fewer than `k`
    cities, report infeasible.
-1. *Feasibility.* Search over sets `D` of deleted edges as in Lemma C, starting from
-   `D = ∅`. Either some `T_D` obeys the degree rule, which gives a feasible network of
-   excess `E0`, or the search ends and the instance is infeasible.
-2. *Optimisation.* For `X = 0, 2, 4, …`: for every selection `S`, enumerate by
+1. *Feasibility.* Depth-first search over sets `D` as in Lemma C, starting from
+   `D = ∅`. Either some `T_D` obeys the degree rule, or the search ends and the
+   instance is infeasible.
+2. *Optimal excess.* Best-first branch and bound over the same sets. Keep a priority
+   queue of sets `D` ordered by `LB(D)`, initially `{∅}`. Remove a set `D` of least
+   `LB(D)`. If `T_D` obeys the degree rule, stop: `X* = LB(D)` and `T_D` attains it.
+   Otherwise pick a crossroads `x` where `T_D` uses four edges and insert the four sets
+   `D ∪ {e}`, `e` an edge at `x`, whose trees exist.
+3. *Optimal tile count at excess `X*`.* For every selection `S`, enumerate by
    depth-first search the path systems for `S`, one pair after the other in a fixed
    order, extending the current path cell by cell. A partial system is abandoned when
-   (i) the current path cannot reach its city within the remaining excess `X`, measured
-   with the grid distance to the city;
+   (i) the current path cannot reach its city within the remaining excess, out of a
+   total of `X*`, measured with the grid distance to the city;
    (ii) a free cell gets a fourth edge;
    (iii) the current path meets an earlier path in a cell after having left that path,
    or moves between two cells of an earlier path along an edge that path does not use;
-   (iv) the number of free cells used reaches the best tile count found at this level.
-   Stop at the first `X` for which a complete system is found, and return the union of
-   the best system found at that level.
+   (iv) the number of free cells used reaches the tile count of the incumbent.
+   The first incumbent is `T_D` from step 2. Return the best network found.
+
+Two heuristics do not affect correctness: in step 2 the crossroads `x` is chosen by
+looking one level ahead, and before step 3 a local search re-routes single pairs of
+the incumbent along other shortest paths to save tiles.
 
 **Theorem 4.** The algorithm returns `None` iff the instance is infeasible, and
 otherwise an optimal solution.
 
-*Proof.* Step 1 is complete and sound by Lemma C. For step 2, call a system *good at
-level `X`* if it is admissible, canonical and of nominal excess at most `X`. No prefix
-of a good system is abandoned by (i)–(iii): excesses are non-negative and the remaining
-length of a path is at least the grid distance to its city; degrees only grow; and
-every sub-family of a canonical system is canonical, which is exactly what (iii) tests
-against the earlier paths. Rule (iv) only discards systems that are not better than one
-already found. So at level `X` the search finds a good system of minimum tile count if
-a good system exists. Let `(X*, K*)` be the optimum. By Lemmas A and B there is a good
-system of nominal cost `(X*, K*)`, and no admissible system has smaller nominal cost.
-Nominal excesses are even. Hence no level below `X*` finds anything, level `X*` finds a
-system with `K*` tiles, and by Lemma A(a) its union is a feasible network of cost at
-most `(X*, K*)`. The loop reaches `X*` because `X* ≤ E0`. ∎
+*Proof.* Step 1 is complete and sound by Lemma C.
+Step 2. Let `(N, S)` be feasible with `N ⊆ G − D`. Then `dist_N(p, c) ≥ d_D(p, c)` for
+every chosen pair, so the excess of `(N, S)` is at least `LB(D)`. Fix an optimal
+`(N*, S*)`. At every moment `N*` lies in `G − D'` for some `D'` in the queue: this
+holds at the start, and by Lemma C it is preserved when a set whose trees violate the
+degree rule is replaced by its children (a child without trees contains no feasible
+network). When the algorithm stops at `D`, we get
+`LB(D) ≤ LB(D') ≤ excess(N*, S*) = X*`, and `T_D` is a feasible network of excess
+`LB(D)`. So `LB(D) = X*`. The search stops because there are finitely many sets and
+none is inserted twice.
+Step 3. Call a system *good* if it is admissible, canonical and of nominal excess at
+most `X*`. No prefix of a good system is abandoned by (i)–(iii): excesses are
+non-negative and the remaining length of a path is at least the grid distance to its
+city; degrees only grow; and every sub-family of a canonical system is canonical, which
+is exactly what (iii) tests against the earlier paths. Rule (iv) only discards systems
+with at least as many tiles as a feasible network of excess `X*` already known. Let
+`K*` be the optimal tile count. By Lemmas A and B there is a good system of nominal
+cost `(X*, K*)`, and no admissible system has smaller nominal cost. Hence the search
+ends with an incumbent of excess `X*` and `K*` tiles: either the system above survives
+until it is found, or it is cut by (iv), and then an incumbent with at most `K*` tiles
+is already known. ∎
 
-**Running time.** Exponential in the worst case, in both steps: step 1 can visit `4^c`
-sets, and step 2 enumerates path systems. We have no polynomial bound, and the
-measurements below show the blow-up.
+**Running time.** Exponential in the worst case, in all three steps: steps 1 and 2 can
+visit `4^c` sets, and step 3 enumerates path systems. We have no polynomial bound, and
+the measurements below show the blow-up of step 3.
 
 `network_solver/brute.py` is the Python mirror of the Lean solver. It follows the Lean
 definitions (`IsNearestChoice`, not `requirements`) and is usable up to about 13 grid
