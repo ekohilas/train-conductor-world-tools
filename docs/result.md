@@ -416,8 +416,9 @@ independently inside blocks:
 * The port needs no change: a terminal may have 4 edges and every walk starts there.
 
 The result is connected, every city is a leaf attached to a free cell, and every free
-cell has degree at most 3. So the port reaches every city by a walk through free cells:
-the solution is feasible. At most `m − 1` cities are repaired, at 3 cells each. A tree
+cell has degree at most 3. A simple path from the port to a city cannot contain another
+city, because cities are leaves. So the port reaches every city by a walk through free
+cells: the solution is feasible. At most `m − 1` cities are repaired, at 3 cells each. A tree
 with at most `m` leaves has at most `(m − 2)/2` vertices of degree 4. So at most
 `3(m − 1) + (m − 2)/2 < 4m` cells are added, and the number of tiles is at most
 `s·RST(A) + 1 − m + 4m`.
@@ -474,7 +475,7 @@ container of this session:
 | | Time | Output |
 |---|---|---|
 | `to_sat` (CPython, clauses generated and counted, not stored) | 550 s | 432,120,212 clauses, 1,076,093,685 literals |
-| CP-SAT, `python -m network_solver solve` (optimisation, 4 workers) | EUROPE_CPSAT | EUROPE_CPSAT_OUT |
+| CP-SAT, `python -m network_solver solve --time-limit 1500 --workers 4` (optimisation) | more than 1300 s; the run had not finished when this line was written | — |
 
 The formula was not given to a SAT solver. The reduction is a proof of membership in NP,
 not a practical algorithm: its time-expanded distance variables cost `Θ(|P|·N²)` clauses.
