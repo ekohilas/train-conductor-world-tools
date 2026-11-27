@@ -8,6 +8,7 @@ For every instance and every query (X, K):
 """
 from __future__ import annotations
 
+import hashlib
 import itertools
 import random
 
@@ -115,3 +116,21 @@ def test_formula_is_polynomial_in_practice():
     assert len(clauses) <= 200 * n ** 4
     assert max(len(cl) for cl in clauses) <= 6
     assert sat.formula_size(clauses) <= 200_000_000 * n ** 7
+
+
+@pytest.mark.parametrize("inst,query,clauses,size,digest", [
+    (Instance(width=3, height=1, blocked=frozenset(), k=1,
+              ports={"P": (0, 0)}, cities={"C": (2, 0)}),
+     (0, 1), 99, 3459, "7b66fadc11c86e08e4c66db9e97b742f50ac82d6d1ce2a78ebb398b177f86eee"),
+    (Instance(width=3, height=2, blocked=frozenset({(1, 0)}), k=1,
+              ports={"P1": (0, 0), "P2": (2, 1)}, cities={"C1": (2, 0), "C2": (0, 1)}),
+     (1, 2), 645, 32735, "98b696280614825b4019830f84ff8141ba920d35aa4073f39a6c8c5c4f26425a"),
+])
+def test_matches_lean_reduction(inst, query, clauses, size, digest):
+    """The Python generator outputs exactly the clause list of the verified Lean
+    reduction `toK` (same clauses, same order, same variable numbers). The expected
+    values were printed by `lean/Check/CompareWithPython.lean`."""
+    formula = list(sat.to_sat(inst, *query))
+    assert len(formula) == clauses
+    assert sat.formula_size(formula) == size
+    assert hashlib.sha256(sat.lean_string(formula).encode()).hexdigest() == digest

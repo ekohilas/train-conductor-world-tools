@@ -338,7 +338,9 @@ minimum length.
 
 * NP-completeness: M. R. Garey and D. S. Johnson, *The rectilinear Steiner tree problem
   is NP-complete*, SIAM J. Appl. Math. 32 (1977), 826–834. In *Computers and
-  Intractability* it is the rectilinear case of [ND13] GEOMETRIC STEINER TREE.
+  Intractability* it is the rectilinear case of [ND13] GEOMETRIC STEINER TREE. The
+  rectilinear metric is also covered by M. R. Garey, R. L. Graham and D. S. Johnson,
+  *Some NP-complete geometric problems*, Proc. 8th ACM STOC (1976), 10–22.
 * Hanan's theorem: M. Hanan, *On Steiner's problem with rectilinear distance*, SIAM J.
   Appl. Math. 14 (1966), 255–265. Some minimum tree lies on the *Hanan grid* of `A` (the
   horizontal and vertical lines through the points of `A`). Hence `RST(A)` is an integer

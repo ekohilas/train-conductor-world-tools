@@ -171,8 +171,15 @@ def to_sat(inst: Instance, X: int, K: int) -> Iterator[Clause]:
 
 def formula_size(clauses: Iterable[Clause]) -> int:
     """Encoding length of a formula: one symbol per clause plus, for every literal, a
-    sign and the binary length of its variable."""
-    return sum(1 + sum(1 + max(1, v.bit_length()) for v, _ in cl) for cl in clauses)
+    sign and the binary length of its variable (`KInstance.size` in Lean)."""
+    return sum(1 + sum(1 + v.bit_length() for v, _ in cl) for cl in clauses)
+
+
+def lean_string(clauses: Iterable[Clause]) -> str:
+    """The formula as Lean prints `(toK I X K).val.clauses` with `toString`."""
+    return "[" + ", ".join(
+        "[" + ", ".join(f"({v}, {'true' if pol else 'false'})" for v, pol in cl) + "]"
+        for cl in clauses) + "]"
 
 
 def satisfiable(clauses: Iterable[Clause], time_limit: float = 600.0,
