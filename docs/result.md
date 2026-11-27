@@ -1,22 +1,28 @@
 # A `2^{O(√N log N)}` algorithm for the Train Network Problem with few ports
 
-**Status.** The Lean goal is reached: `lean/TrainNetwork/Goal.lean` builds, and
-`goal_correct` and `goal_subexp` are proved with no axioms beyond `propext`,
-`Classical.choice` and `Quot.sound` (section 8). This document is the paper proof of the
-same claim. The Python experiments (section 11) are still being written up.
+**Status: the goal is reached.**
+
+- *Lean.* `cd lean && lake build` succeeds with `Goal.lean` imported; `goal_correct` and
+  `goal_subexp` are proved with no axioms beyond `propext`, `Classical.choice` and
+  `Quot.sound`, no `sorry`, and no change to the frozen files (section 8).
+- *Paper.* Sections 1–7 are a self-contained proof of the same claim; section 10 lists
+  every place where it differs from the Lean proof.
+- *Python.* `network_solver/layerdp.py` implements the algorithm and agrees with the
+  CP-SAT oracle on 431 random instances in the test suite (section 11).
 
 | | |
 |---|---|
 | Claim | With at most 10 ports and 40 cities, the optimisation problem of `docs/problem.md` is solved exactly in time `2^{o(N)}`. |
-| Best bound achieved | `time ≤ C · N^(a + b·min(W, H))` with explicit constants (``C = 2^420`, `a = 60`, `b = 90``), hence **`2^{O(√N · log N)}`**, because `min(W, H) ≤ √N`. Machine-checked as `Answer.solve_time_le`. |
+| Best bound achieved | `time ≤ C · N^(a + b·min(W, H))` with explicit constants (`C = 2^420`, `a = 60`, `b = 90`), hence **`2^{O(√N · log N)}`**, because `min(W, H) ≤ √N`. Machine-checked as `Answer.solve_time_le`. |
 | General form (paper only) | `2^{|P|·|C|} · N^{O(|P| · min(W, H))}` for `|P|` ports and `|C|` cities. |
 | Technique | Network distances have *locally checkable certificates* (distance labels with predecessor pointers). Optimising over certificates is a shortest-path problem in a layered graph whose layers are grid columns (or rows), so a layer has at most `√N` cells. |
 
 What is **not** claimed: the algorithm is not practical. The constants are astronomical
-(`2^{O(√N log N)}` drops below `2^N` only for `N` in the millions), the verified algorithm
+(the proved bound `2^420·N^(60 + 90·√N)` drops below `2^N` only for `N` around four million), the verified algorithm
 enumerates all candidate layer states densely, and neither it nor the pruned Python
-variant finishes on `data/instances/europe.json` (section 11). CP-SAT remains the
-practical solver. The result is a worst-case complexity statement.
+variant finishes on `data/instances/europe.json` (section 11.4). CP-SAT remains the
+practical solver (on that instance it finds a verified solution within its 10-minute
+limit, without proving it optimal). The result is a worst-case complexity statement.
 
 Throughout, `N` is the Lean input size `Instance.size = W·H + 1` (the frozen
 `Cost.lean`); the task statement's `N = W·H` differs by one, which changes nothing.
@@ -394,7 +400,7 @@ the closure is `O(1)`; evaluating it later is not part of `solve`'s running time
     order (column by column), as produced by scanning the grid.
 11. **Running time.** The paper gives `2^{|P||C|}·N^{O(|P|·m)}` for general `|P|`, `|C|`.
     Lean proves the bound only for `|P| ≤ 10`, `|C| ≤ 40`, with the explicit constants of
-    `Answer.solve_time_le` (``C = 2^420`, `a = 60`, `b = 90``); these constants are deliberately generous and
+    `Answer.solve_time_le` (`C = 2^420`, `a = 60`, `b = 90`); these constants are deliberately generous and
     far from tight. The step from this bound to `2^{εN}` is `pow_sqrt_subexp`.
 12. **Cost model.** The paper counts elementary steps informally. Lean counts `tick`s
     under the convention of section 9; in particular list accesses are charged linearly
@@ -409,7 +415,155 @@ the closure is `O(1)`; evaluating it later is not part of `solve`'s running time
 
 ## 11. Python implementation and experiments
 
-*This section is being completed: the implementation is in `network_solver/layerdp.py`
-and its tests in `tests/test_layerdp.py`; the test summary and the benchmark on
-`data/instances/europe.json` will be recorded here.*
+Nothing in this section is machine-checked. The Lean theorems are about `Answer.solve`
+of section 5; the Python code is a separate implementation of the same optimisation
+over certificates, validated by testing against the CP-SAT oracle.
 
+### 11.1 `network_solver/layerdp.py`
+
+`solve(instance, mode=...)` (CLI: `python -m network_solver solve-dp INSTANCE`). Every
+returned solution is checked with `network_solver.verify.check`, and the code asserts
+that its verified cost equals the cost the DP computed.
+
+- **`mode="verbatim"`** is the certificate system of section 3 and the layered DP of
+  section 4, with no additional constraint. It differs from the Lean algorithm only in
+  how the same quantities are computed: grid distances by BFS; choices as "required
+  cities plus a subset of the tie group"; the self-valid states of a layer are generated
+  by backtracking instead of enumerating all `|Λ|^m` lists and filtering; the minimum over
+  the next table is taken over projections of states. It finishes only on tiny inputs
+  (strips up to 11 × 1 with two ports, 3 × 3 with one port).
+- **`mode="pruned"`** (default) optimises over *canonical* certificates only, processes
+  the grid one cell at a time (a broken-profile version of the layer-to-layer step, with
+  layers of `min(W, H)` cells), keeps a "predecessor still needed" flag instead of
+  enumerating predecessor directions, and uses iterative deepening on an excess budget.
+
+### 11.2 Why pruned mode is exact (paper argument)
+
+*Canonical certificate.* Let `τ` be an optimal solution. For each port `p_j` take the BFS
+tree of `τ` in which the parent of a cell is its first neighbour (in the order
+`L, U, D, R`) that is joined to it in `τ`, is transit for `j`, and is one step closer to
+`p_j`. Let `S_j` be the union of the tree paths from `p_j` to its chosen cities and
+`N' = ⋃_j S_j`. Then `N' ⊆ τ` (degree caps hold, no more tiles) and the tree paths are
+shortest in `τ`, so the chosen pairs have the same distances in `N'` as in `τ`: `N'` is
+optimal too. Label `x ∈ S_j` with `(dist_τ(p_j, x), direction of its parent)` and all
+other cells with `⊥` for `j`. This is a certificate for `N'` whose cost is the cost of
+`N'`.
+
+Every rule below is satisfied by the canonical certificate of an optimal solution, and
+rules only remove certificates. So the pruned optimum is the cost of a genuine
+certificate (hence `≥` the true optimum by Lemma 2) and `≤` the cost of the canonical
+certificate (the true optimum). `g_j(x)` is the grid distance from `p_j` to `x`, and
+`h(x, c)` the grid distance from `x` to `c`.
+
+| Rule | Statement | Why the canonical certificate satisfies it |
+|---|---|---|
+| P1 corridor, budget `X` | an entry `d` of port `j` at `x` has `g_j(x) ≤ d ≤ max_c (d(p_j, c) + X − h(x, c))` over the chosen cities `c` of `j` (for a city cell: its own bound only) | `x` lies on the tree path to some chosen `c`, so `d + h(x, c) ≤ dist_τ(p_j, c) ≤ d(p_j, c) + X` whenever the total excess is `≤ X` |
+| P2 Lipschitz | on a network edge `x–y` with both cells labelled for `j` and `x` transit: `d_j(y) ≤ d_j(x) + 1` | labels are exact distances in `τ` |
+| P3 successor | a free cell labelled for `j` is the parent, for `j`, of one of its network neighbours | a free cell of `S_j` is interior to a tree path |
+| P4 no junk | a cell with an edge bit has an entry; a city has an entry for `j` only if chosen for `j`; a port only for itself; every network edge joins a cell to its parent for some port | `N'` is the union of the trees `S_j`, whose leaves are chosen cities |
+| P5 | a free cell with an edge bit has at least two | same |
+| P6 excess cap | in a run with budget `X`, partial certificates with accumulated excess `> X` are dropped | excess terms are non-negative |
+| P7 incumbent | partial certificates already at least as expensive as the best complete certificate of an earlier choice combination are dropped | costs only grow |
+| P8 budget split | `Σ_j max_x η_j(x) ≤ X` over the frontier cells, where `η_j(x) = min_c (d + h(x, c) − d(p_j, c))` | the path through `x` has excess `≥ η_j(x)`, and different ports give different pairs |
+| P9, P10 counting | per port: the number of frontier cells that still owe a child is at most the number of unprocessed chosen cities plus the number of frontier cells still lacking a parent, and symmetrically | injections along the tree `S_j` (spelled out in the module docstring) |
+
+*Iterative deepening.* The run with budget `X` (for `X = 0, 2, 4, 8, …`, over all choice
+combinations) is accepted if it returns a certificate of excess `≤ X`: then the optimal
+excess is `≤ X`, the canonical certificate of an optimal solution passes P1, P6 and P8,
+and the run's optimum is the global optimum. The last run, with `X ≥ W·H`, drops P6 and
+P8; its corridor contains the canonical certificate of every feasible solution
+(distances are `< W·H`), so if it finds nothing the instance is infeasible.
+
+The full statements, including the lazy handling of predecessor directions, are in the
+docstring of `network_solver/layerdp.py`.
+
+### 11.3 Agreement with the CP-SAT oracle
+
+`tests/test_layerdp.py`, run by `python -m pytest -q` (**509 tests pass in 66 s, 490 of them in this file**):
+
+- **Pruned mode vs CP-SAT on 431 random instances** from `network_solver.generate`
+  (the oracle must report a proven optimum or infeasibility). 24 grid shapes from 3 × 3 to
+  16 × 12 (9 to 192 cells), including 9 × 1 and 1 × 9 strips; 1–3 ports, 2–5 cities, every
+  `k`, blocked fraction 0, 0.1, 0.2, 0.3. Of these, 256 have blocked cells, 92 have a
+  non-trivial tie group (more than one choice combination), 6 are infeasible, 33 have a
+  positive optimal excess and 144 are taller than wide. The full lexicographic cost is
+  compared, and the DP's solution is checked by the independent verifier. A summary test
+  asserts these counts.
+- **Verbatim mode vs pruned mode vs brute force** (enumeration of all edge subsets) on
+  44 tiny random instances and two hand-made 3 × 3 cases, one of them infeasible.
+- **Hand-made cases**: the plus-shaped crossing (excess 2); the same crossing inside
+  width-1 cloud corridors (infeasible); a port adjacent to its city (cost `(0, 0)`); tie
+  groups where the choice changes the cost; a port that reaches fewer than `k` cities;
+  transposed instances; the time and memory guards; the CLI.
+
+Two restrictions of the random test set, both because pruned mode is slow when it has to
+go to a large budget (many pairs on few cells, or infeasibility): the generator does not
+produce instances with `ports·k ≥ 12` on grids of at least 16 cells or `ports·k ≥ 9` on
+grids of more than 60 cells, and one generated instance is excluded by hand (7 × 3,
+infeasible, 9 pairs: CP-SAT refutes it at once, the DP needs more than 8 million states
+for its final run).
+
+An independent fuzz with other seeds, run once for this report and not part of the test
+suite (18 shapes from 3 × 3 to 12 × 8 plus strips, same parameter ranges): of 300 generated
+cases, 13 had no instance in which every port reaches `k` cities, 1 hit the DP's guard
+(15 s / 2 million table entries) and was not compared, and the remaining 286 all agree
+with CP-SAT (181 with blocked cells, 64 with a non-trivial tie group, 2 infeasible, 20
+with positive optimal excess).
+
+### 11.4 Runtime on `data/instances/europe.json`
+
+49 × 55 grid, 6 ports, 23 cities, `k = 9`, 1149 blocked cells, 8 choice combinations.
+Measured on the 4-core machine of this session.
+
+| Solver | Result | Time |
+|---|---|---|
+| CP-SAT (`python -m network_solver solve`, default 600 s limit, 8 workers) | feasible, **not proven optimal**: excess 2, 210 tiles (tile lower bound 207); accepted by the verifier | 600 s (time limit reached) |
+| Layered DP, pruned mode (`python -m network_solver.bench_layerdp europe`, limits: 1800 s, 5 million table entries, 8 GB) | **no result**: stopped by the table-size guard in the `X = 0` run of the first choice combination, in row 12 of 55 (cell 20 of 49); the table had reached 5,000,057 states, after 409,277 at the end of row 11 | 40 s until the guard fired |
+| Layered DP, verbatim mode / the verified `Answer.solve` | not attempted: a single layer has `(16·(4·2696 + 1)^6)^49` candidate states | — |
+
+So the DP does not solve the real map, and nothing in this work suggests it could with
+more time: the frontier table grows by three orders of magnitude within one row. On this
+instance CP-SAT is the only method here that produces a solution.
+
+### 11.5 Where pruned mode does work
+
+`python -m network_solver.bench_layerdp scaling` (random instances, 10 seeds per size,
+10 s and 3 million table entries per instance, 3 parallel workers):
+
+| Grid | 2 ports, 4 cities, `k = 2`, 10 % blocked | 3 ports, 5 cities, `k = 3`, 10 % blocked | 4 ports, 8 cities, `k = 4`, 20 % blocked |
+|---|---|---|---|
+| 6 × 6 | 10/10 | 10/10 | 3/10 |
+| 8 × 8 | 10/10 | 10/10 | 6/10 |
+| 10 × 10 | 10/10 | 10/10 | 8/10 |
+| 15 × 15 | 10/10 | 9/10 | 5/10 |
+| 20 × 15 | 10/10 | 10/10 | 8/10 |
+| 20 × 20 | 10/10 | 9/10 | 6/10 |
+| 30 × 20 | 10/10 | 9/10 | 8/10 |
+| 30 × 30 | 10/10 | 8/10 | 9/10 |
+| 40 × 30 | 10/10 | 5/10 | 8/10 |
+| 40 × 40 | 10/10 | 3/10 | 1/10 |
+| 50 × 50 | 9/10 | 6/10 | 3/10 |
+
+(Entries: instances finished within the limits, out of 10. In the first column the
+slowest finished instance took 0.8 s; in the other two the median of the finished
+instances stays below 6 s and the largest table had about 1.3 million entries.)
+
+Runtime is heavy-tailed. Pruned mode is fast when the optimal excess is small and the
+shortest-path corridors are narrow, and it degrades sharply with the budget `X` it needs;
+proving infeasibility needs the final run and is slow beyond about 20 cells with many
+pairs. Verbatim mode: 11 × 1 with two ports within 1 s, 3 × 3 with one port within 4 s,
+3 × 2 with two ports 1–8 s, 4 × 2 with two ports over two minutes.
+
+## 12. Summary of what is and is not established
+
+- **Machine-checked** (Lean, section 8): `Answer.solve` is correct on every instance and
+  runs in time `2^420 · N^(60 + 90·min(W, H)) = 2^{O(√N log N)}` when there are at most 10
+  ports and 40 cities; hence the frozen goal `2^{o(N)}`.
+- **Paper proof** (sections 2–7): the same, plus the general bound
+  `2^{|P||C|} · N^{O(|P|·min(W, H))}`.
+- **Tested, not proved**: the Python implementation; in particular the pruning rules of
+  section 11.2 rest on the arguments given there and on agreement with CP-SAT.
+- **Not achieved / not claimed**: a practical algorithm. The DP does not finish on
+  `europe.json`; the verified algorithm only runs on strips of a few cells; the constants
+  in the bound are far from tight. Whether the problem with a bounded number of ports is
+  solvable in time `2^{O(√N)}` or even polynomial time is left open here.
