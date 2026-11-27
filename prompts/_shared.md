@@ -70,4 +70,6 @@ Your result counts only if **all** of these hold:
   proved, what blocked you, and the strongest partial result with its exact
   statement. A clear negative report is far more useful than a weakened or disguised
   claim. Never present a partial result as the goal.
+- Work only on the branch that is checked out. Do not fetch, check out, diff against or
+  read any other branch or tag, and push only to this branch.
 - Commit your work in small steps with clear messages.

@@ -8,6 +8,11 @@
 # current HEAD except `prompts/` and `scripts/`, plus that rung's frozen
 # `lean/TrainNetwork/Goal.lean`. The full prompt (rung header + shared body) is written
 # to the output file (default: stdout).
+#
+# Branch names are opaque (`fable/run-<random>`) and no tags are created, so a routine
+# `git branch -a` on the remote doesn't reveal which rung a branch is, or that a ladder
+# exists. The rung -> branch mapping is recorded only locally, in .git/fable-runs.
+# The review base is the branch's single root commit.
 set -euo pipefail
 
 rung="${1:?usage: $0 <rung 1-4> [prompt-output-file]}"
@@ -22,7 +27,7 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 
 orig="$(git symbolic-ref --short HEAD)"
-branch="fable/rung-$rung"
+branch="fable/run-$(python3 -c 'import secrets; print(secrets.token_hex(3))')"
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
@@ -61,10 +66,11 @@ printf 'import TrainNetwork.Problem\nimport TrainNetwork.Cost\nimport TrainNetwo
 git add -A
 git commit -q -m "Train Network Problem: workspace for a complexity result"
 base="$(git rev-parse HEAD)"
-git tag -f "fable-rung-$rung-base" "$base" >/dev/null
 
 # Return to where we started.
 git checkout -q -f "$orig"
 
+echo "rung $rung  $branch  base $base  $(date -u +%FT%TZ)" >> "$(git rev-parse --git-dir)/fable-runs"
 cp "$tmp/prompt.md" "$out" 2>/dev/null || cat "$tmp/prompt.md"
-echo "branch $branch at $base (tag fable-rung-$rung-base); prompt -> $out" >&2
+echo "rung $rung -> branch $branch (base $base); prompt -> $out" >&2
+echo "push with: git push -u origin $branch" >&2

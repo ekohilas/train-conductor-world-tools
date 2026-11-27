@@ -29,17 +29,21 @@ Four research prompts on the complexity of the Train Network Problem
 2. For each rung:
    ```bash
    scripts/prepare_fable_branch.sh 4 /tmp/rung4-prompt.md
-   git push -u origin fable/rung-4 && git push origin fable-rung-4-base
+   git push -u origin fable/run-<id>     # the branch name the script prints
    ```
-   Start a **fresh** session on branch `fable/rung-4` and give it
-   `/tmp/rung4-prompt.md` as the first message.
+   Start a **fresh** session on that branch and give it `/tmp/rung4-prompt.md` as the
+   first message. The script records which rung each `fable/run-<id>` branch is in
+   `.git/fable-runs` (local only).
 3. The branch is an orphan commit without `prompts/` or `scripts/`, and each prompt is
-   standalone. The agent never sees the other rungs, the review checklist, or any
-   earlier result. Keep earlier results, successes and failures alike, out of later
+   standalone. Branch names are opaque and no tags are pushed, so other branches on the
+   remote don't announce which rung they are. The shared prompt tells the agent to
+   work only on its own branch. That last part is a request, not a guarantee: other
+   branches (including this one and earlier rungs' branches) stay readable if the
+   agent deliberately fetches them. Keep earlier results, successes and failures alike, out of later
    prompts, so a harder rung isn't anchored on an easier rung's approach.
 4. When a run claims success, start another fresh session and give it `review.md`, with
-   `<BRANCH>` and `<BASE_COMMIT>` filled in (the `fable-rung-N-base` tag). A rung counts
-   as passed only on an ACCEPT verdict.
+   `<BRANCH>` filled in. The base is the branch's root commit. A rung counts as passed
+   only on an ACCEPT verdict.
 
 ## Files
 

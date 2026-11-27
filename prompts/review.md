@@ -1,7 +1,8 @@
 # Task: audit a claimed result on the Train Network Problem
 
 You are an independent reviewer. Another agent worked on branch `<BRANCH>`, starting
-from the commit tagged `<BASE_COMMIT>`. It claims to have proved the theorem in
+from its root commit (`BASE=$(git rev-list --max-parents=0 <BRANCH>)`; written as
+`<BASE_COMMIT>` below). It claims to have proved the theorem in
 `lean/TrainNetwork/Goal.lean`. Your job is to find out whether that claim is
 **actually true and actually proved**, not to improve the work. Assume it may contain
 subtle cheating, including unintentional cheating. You pass it only if every check
