@@ -40,13 +40,16 @@ def rst_to_train(points: list[Point], L: int) -> tuple[Instance, int, int]:
     s, cells = _place(points)
     width = max(x for x, _ in cells) + MARGIN + 1
     height = max(y for _, y in cells) + MARGIN + 1
+    spread = max(max(x for x, _ in points) - min(x for x, _ in points),
+                 max(y for _, y in points) - min(y for _, y in points))
+    L = min(L, 2 * m * spread)     # a spanning tree is never longer than this
     inst = Instance(
         width=width, height=height, blocked=frozenset(), k=m - 1,
         ports={"P": cells[0]},
         cities={f"C{i}": c for i, c in enumerate(cells[1:], start=1)},
     )
     X = (m - 1) * width * height   # never binds: every network distance is < W*H
-    K = s * L + 3 * m + 1
+    K = s * L + 3 * m + 1 if L >= 0 else 0   # K = 0 is a no-instance: a tile is needed
     return inst, X, K
 
 

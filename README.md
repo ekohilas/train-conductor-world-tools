@@ -47,6 +47,13 @@ the verifier and the Lean formalisation.
   independent checker.
 * `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
 * `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
+* [`docs/result.md`](docs/result.md): the complexity result and its status. The decision
+  problem reduces to SAT (machine-checked in `lean/TrainNetwork/Forward.lean`), and
+  Rectilinear Steiner Tree reduces to it (paper proof), so it is NP-complete. The
+  backward half of `lean/TrainNetwork/Goal.lean` is **not** machine-checked.
+* `python -c "from network_solver.decide import decide_sat; ..."`: decide a query
+  `(instance, X, K)` through the reduction to SAT (`network_solver/sat.py`).
+  `network_solver/steiner.py` is the reduction from Rectilinear Steiner Tree.
 
 ## TODO
 

@@ -101,3 +101,16 @@ def test_collinear_points_need_bypass():
     s, m = steiner.scale_factor(pts), len(pts)
     assert report.ok and report.tiles == s * opt + 1 - m + 3
     assert report.tiles <= K
+
+
+def test_extreme_bounds():
+    pts = [(0, 0), (2, 1), (1, 3)]
+    opt = steiner.rst_length(pts)
+    inst, X, K = steiner.rst_to_train(pts, -5)       # negative bound: a no-instance
+    assert K == 0
+    lower = steiner.grid_steiner_edges(inst.width, inst.height,
+                                       [inst.ports["P"]] + list(inst.cities.values()))
+    assert lower + 1 - len(pts) > K
+    _, _, k_big = steiner.rst_to_train(pts, 10**12)  # huge bound: clamped, still a yes
+    _, _, k_opt = steiner.rst_to_train(pts, opt)
+    assert k_opt <= k_big <= steiner.scale_factor(pts) * 2 * 3 * 3 + 3 * 3 + 1
