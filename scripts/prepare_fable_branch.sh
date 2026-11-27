@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds a clean branch for one rung of the Fable prompt ladder and writes its prompt.
 #
-#   scripts/prepare_fable_branch.sh <rung 1-4> [prompt-output-file]
+#   scripts/prepare_fable_branch.sh <rung 1-5> [prompt-output-file]
 #
 # The branch is an orphan commit (no history), so the agent can't find the other rungs,
 # the prompts or the review checklist in `git log`. It contains everything in the
@@ -15,9 +15,9 @@
 # The review base is the branch's single root commit.
 set -euo pipefail
 
-rung="${1:?usage: $0 <rung 1-4> [prompt-output-file]}"
+rung="${1:?usage: $0 <rung 1-5> [prompt-output-file]}"
 out="${2:-/dev/stdout}"
-case "$rung" in 1|2|3|4) ;; *) echo "rung must be 1-4" >&2; exit 1 ;; esac
+case "$rung" in 1|2|3|4|5) ;; *) echo "rung must be 1-5" >&2; exit 1 ;; esac
 
 root="$(git rev-parse --show-toplevel)"
 cd "$root"
