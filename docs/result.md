@@ -403,8 +403,9 @@ Step 2. Let `(N, S)` be feasible with `N ⊆ G − D`. Then `dist_N(p, c) ≥ d_
 every chosen pair, so the excess of `(N, S)` is at least `LB(D)`. Fix an optimal
 `(N*, S*)`. At every moment `N*` lies in `G − D'` for some `D'` in the queue: this
 holds at the start, and by Lemma C it is preserved when a set whose trees violate the
-degree rule is replaced by its children (a child without trees contains no feasible
-network). When the algorithm stops at `D`, we get
+degree rule is replaced by its children. (A child without trees contains no feasible
+network. A child that was inserted earlier is not inserted again, but by induction it
+already has a superset in the queue whose subgraph contains `N*`.) When the algorithm stops at `D`, we get
 `LB(D) ≤ LB(D') ≤ excess(N*, S*) = X*`, and `T_D` is a feasible network of excess
 `LB(D)`. So `LB(D) = X*`. The search stops because there are finitely many sets and
 none is inserted twice.

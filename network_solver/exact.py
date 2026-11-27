@@ -4,7 +4,7 @@ This is the *search* half of the partial result described in docs/result.md. It 
 on every instance, but its worst-case running time is exponential: it is NOT the
 polynomial-time algorithm the goal asks for (we do not have one).
 
-What it relies on (docs/result.md, section 3):
+What it relies on (docs/result.md, section 2; correctness is Theorem 4 in section 6):
 
 * Lemma A (path systems). The optimum equals the minimum, over all families of simple
   port-to-city paths (one per chosen pair, interior cells free) whose union has at most
@@ -14,10 +14,10 @@ What it relies on (docs/result.md, section 3):
   meet in one common contiguous sub-path (possibly empty). So the search may reject a
   new path as soon as it re-touches an earlier path it has already left, or joins two
   cells of an earlier path by an edge that path does not use.
-* Lemma C (T-orientations). A network is feasible iff it avoids at least one of the four
-  edges at every free cell with four open neighbours ("crossroads"). Hence branching on
-  the edge to delete at a crossroads that the current tree union uses with degree 4 is a
-  complete search for feasibility.
+* Lemma C (T-orientations). A network obeys the degree rule iff it avoids at least one
+  of the four edges at every free cell with four open neighbours ("crossroads"). Hence
+  branching on the edge to delete at a crossroads that the current tree union uses with
+  degree 4 is a complete search.
 
 Algorithm:
   0. `requirements` (k nearest cities, tie group). No solution if a port reaches < k.
