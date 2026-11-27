@@ -34,6 +34,23 @@ found [here](https://github.com/ekohilas/train-conductor-world-map).
 
 ![](./annotations.png)
 
+## Network optimisation and complexity research
+
+The problem of laying out the cheapest track network is defined formally in
+[`docs/problem.md`](docs/problem.md). The definition is frozen and shared by the solver,
+the verifier and the Lean formalisation.
+
+* `python -m network_solver extract`: rebuild `data/instances/europe.json` from the Tiled map.
+* `python -m network_solver solve data/instances/europe.json --out solution.json`:
+  exact CP-SAT solver. It minimises total excess path length first, then track tiles.
+* `python -m network_solver verify data/instances/europe.json solution.json`: an
+  independent checker.
+* `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
+* `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
+* `prompts/`: a ladder of research prompts, hardest first, plus a review checklist.
+  `scripts/prepare_fable_branch.sh <rung>` builds a clean, history-free branch for one
+  rung and prints its prompt. See [`prompts/README.md`](prompts/README.md).
+
 ## TODO
 
 * Add tests

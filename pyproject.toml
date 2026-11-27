@@ -13,6 +13,8 @@ networkx = "^3.0"
 watchdog = "^2.2.1"
 black = { extras = ["d"], version = "^23.1.0" }
 pylint = "^2.16.1"
+ortools = "^9.10"
+pytest = "^8.0"
 
 [build-system]
 requires = ["poetry-core"]

@@ -46,18 +46,18 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(stats))
         if sol is None:
             return 1
-        errors = verify.check(inst, sol)
-        print("verify:", "OK" if not errors else errors)
+        report = verify.check(inst, sol)
+        print("verify:", f"OK excess={report.excess} tiles={report.tiles}" if report.ok else report.errors)
         if args.out:
             with open(args.out, "w", encoding="utf-8") as f:
                 json.dump(sol.to_json(inst), f, indent=1)
-        return 0 if not errors else 1
+        return 0 if report.ok else 1
 
     with open(args.solution, encoding="utf-8") as f:
         sol = Solution.from_json(json.load(f))
-    errors = verify.check(inst, sol)
-    print(f"tiles={sol.cost(inst)}", "OK" if not errors else "\n".join(errors))
-    return 0 if not errors else 1
+    report = verify.check(inst, sol)
+    print(f"excess={report.excess} tiles={report.tiles}", "OK" if report.ok else "\n".join(report.errors))
+    return 0 if report.ok else 1
 
 
 if __name__ == "__main__":
