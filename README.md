@@ -47,7 +47,7 @@ the verifier and the Lean formalisation.
   independent checker.
 * `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
 * `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
-* `prompts/`: a ladder of research prompts, hardest first, plus a review checklist.
+* `prompts/`: a ladder of research prompts (run easiest first), plus a review checklist.
   `scripts/prepare_fable_branch.sh <rung>` builds a clean, history-free branch for one
   rung and prints its prompt. See [`prompts/README.md`](prompts/README.md).
 

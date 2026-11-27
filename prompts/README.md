@@ -1,7 +1,7 @@
 # Fable prompt ladder
 
 Four research prompts on the complexity of the Train Network Problem
-(`docs/problem.md`), ordered from hardest to easiest:
+(`docs/problem.md`). Rungs are numbered from hardest (1) to easiest (4):
 
 | Rung | Goal | Sizes | Lean goal (`goals/RungN.lean`) |
 |---|---|---|---|
@@ -10,20 +10,33 @@ Four research prompts on the complexity of the Train Network Problem
 | 3 | Exact algorithm, polynomial in N | P ≤ 10, C ≤ 40 | `goal_correct`, `goal_polytime` |
 | 4 | Exact algorithm in time 2^{o(N)} | P ≤ 10, C ≤ 40 | `goal_correct`, `goal_subexp` |
 
+## How the results relate
+
+* **1 ⇒ 3 ⇒ 4.** A polynomial algorithm for unbounded terminals is also polynomial
+  with at most 10 ports and 40 cities, and polynomial time is also `2^{o(N)}`.
+* **Rung 2 is a separate track.** If it shows equivalence to an NP-hard problem, rung 1
+  is hopeless unless P = NP. It says nothing about rungs 3 and 4, which can both still
+  succeed.
+
 ## How to run the ladder
 
-1. Run rung 1 first. Only if it fails, run rung 2, and so on. Stop at the first rung
-   that passes review.
+1. Run two tracks independently, in parallel:
+   * **Algorithm track, easiest first: 4 → 3 → 1.** Climb only after the current rung
+     passes review. Stop at the first rung that fails. A failed attempt doesn't prove
+     a rung impossible. But a harder rung implies the easier one, so it's unlikely to
+     succeed where the easier one didn't.
+   * **Equivalence track: rung 2,** run on its own whenever convenient.
 2. For each rung:
    ```bash
-   scripts/prepare_fable_branch.sh 1 /tmp/rung1-prompt.md
-   git push -u origin fable/rung-1 && git push origin fable-rung-1-base
+   scripts/prepare_fable_branch.sh 4 /tmp/rung4-prompt.md
+   git push -u origin fable/rung-4 && git push origin fable-rung-4-base
    ```
-   Start a **fresh** session on branch `fable/rung-1` and give it
-   `/tmp/rung1-prompt.md` as the first message.
+   Start a **fresh** session on branch `fable/rung-4` and give it
+   `/tmp/rung4-prompt.md` as the first message.
 3. The branch is an orphan commit without `prompts/` or `scripts/`, and each prompt is
-   standalone. The agent never sees the other rungs, the review checklist, or that an
-   earlier rung failed. Keep failure reports out of later prompts.
+   standalone. The agent never sees the other rungs, the review checklist, or any
+   earlier result. Keep earlier results, successes and failures alike, out of later
+   prompts, so a harder rung isn't anchored on an easier rung's approach.
 4. When a run claims success, start another fresh session and give it `review.md`, with
    `<BRANCH>` and `<BASE_COMMIT>` filled in (the `fable-rung-N-base` tag). A rung counts
    as passed only on an ACCEPT verdict.
