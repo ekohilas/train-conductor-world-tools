@@ -2,7 +2,11 @@
 
   python -m network_solver extract            # rebuild data/instances/europe.json from the Tiled map
   python -m network_solver solve INSTANCE [--out SOLUTION] [--time-limit S] [--log]
+  python -m network_solver exact INSTANCE [--out SOLUTION] [--time-limit S]
   python -m network_solver verify INSTANCE SOLUTION
+
+`solve` is the CP-SAT oracle. `exact` is the combinatorial search of
+network_solver/exact.py: exact, no CP-SAT, exponential in the worst case.
 """
 from __future__ import annotations
 
@@ -11,7 +15,7 @@ import json
 import pathlib
 import sys
 
-from network_solver import cpsat, verify
+from network_solver import cpsat, exact, verify
 from network_solver.instance import Instance, Solution, from_tiled_map
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -28,6 +32,10 @@ def main(argv: list[str] | None = None) -> int:
     so.add_argument("--time-limit", type=float, default=600.0)
     so.add_argument("--workers", type=int, default=8)
     so.add_argument("--log", action="store_true")
+    exa = sub.add_parser("exact")
+    exa.add_argument("instance")
+    exa.add_argument("--out")
+    exa.add_argument("--time-limit", type=float, default=None)
     ve = sub.add_parser("verify")
     ve.add_argument("instance")
     ve.add_argument("solution")
@@ -52,6 +60,19 @@ def main(argv: list[str] | None = None) -> int:
             with open(args.out, "w", encoding="utf-8") as f:
                 json.dump(sol.to_json(inst), f, indent=1)
         return 0 if report.ok else 1
+
+    if args.cmd == "exact":
+        sol, stats = exact.solve(inst, time_limit=args.time_limit)
+        print(json.dumps(stats))
+        if sol is None:
+            return 0 if stats["optimal"] else 1
+        report = verify.check(inst, sol)
+        note = "" if stats["optimal"] else " (search not finished: feasible, not proven optimal)"
+        print("verify:", f"OK excess={report.excess} tiles={report.tiles}{note}" if report.ok else report.errors)
+        if args.out:
+            with open(args.out, "w", encoding="utf-8") as f:
+                json.dump(sol.to_json(inst), f, indent=1)
+        return 0 if report.ok and stats["optimal"] else 1
 
     with open(args.solution, encoding="utf-8") as f:
         sol = Solution.from_json(json.load(f))

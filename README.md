@@ -48,6 +48,23 @@ the verifier and the Lean formalisation.
 * `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
 * `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
 
+### Bounded terminals: status
+
+[`docs/result.md`](docs/result.md) reports on the question "with at most 10 ports and 40
+cities, is the problem solvable in time polynomial in `W · H`?" (`lean/TrainNetwork/Goal.lean`).
+**That goal was not reached**: there is no polynomial-time algorithm here, `Goal.lean` is
+not built, and the report says what blocks it. What exists:
+
+* `lean/TrainNetwork/Partial.lean`: a machine-checked proof that an exhaustive
+  (exponential) solver returns an optimal solution, or `none` exactly when the instance is
+  infeasible.
+* `python -m network_solver exact INSTANCE [--time-limit S]`: an exact combinatorial
+  solver that does not use CP-SAT (`network_solver/exact.py`). Exponential in the worst
+  case; it agrees with CP-SAT on the 296 random instances of `tests/test_exact.py`.
+* `network_solver/brute.py`: the Python mirror of the Lean solver, for tiny instances.
+* `network_solver/families.py`: small instance families with a constant number of
+  terminals that need long detours or have no solution.
+
 ## TODO
 
 * Add tests
