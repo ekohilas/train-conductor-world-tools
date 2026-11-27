@@ -10,10 +10,10 @@ An instance consists of:
 
 - A rectangular grid of `W × H` cells, `(x, y)` with `0 ≤ x < W`, `0 ≤ y < H`. Two cells
   are **adjacent** when they differ by 1 in exactly one coordinate (4-neighbourhood).
-- A set `B` of **blocked** cells (clouds).
+- A set `B` of **blocked** cells (clouds), each inside the grid.
 - A set `P` of **ports** and a disjoint set `C` of **cities**. Each sits on its own
-  non-blocked cell. Together they are the **terminals** `T = P ∪ C`.
-- An integer `k ≥ 1` (the real instance uses `k = 9`).
+  non-blocked cell inside the grid. Together they are the **terminals** `T = P ∪ C`.
+- An integer `k` with `1 ≤ k ≤ |C|` (the real instance uses `k = 9`).
 
 Every other cell (not blocked, not a terminal) is **free**: it may hold a track tile.
 
@@ -69,8 +69,9 @@ Minimise, **lexicographically**:
 1. **Total excess:** `Σ over ports p, chosen cities c of (dist_N(p, c) − d(p, c))`.
 2. **Tile count:** the number of track tiles of `N`.
 
-Edges between two terminals are allowed but are never needed. Edges cost nothing beyond
-the tiles they touch.
+An edge may join two terminals directly. This matters when a port is next to a city it
+must reach: the direct edge gives a path of length 1 with no track tile. Edges cost
+nothing beyond the tiles they touch, so such an edge is free.
 
 ## Decision version (for complexity statements)
 

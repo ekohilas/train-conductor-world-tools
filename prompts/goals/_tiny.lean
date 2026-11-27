@@ -7,8 +7,10 @@ def tinyInstance : Instance where
   cities := {(2, 0)}
   k := 1
   k_pos := by decide
+  k_le_cities := by decide
   ports_cities := by decide
   ports_unblocked := by decide
   cities_unblocked := by decide
   ports_inBounds := by decide
   cities_inBounds := by decide
+  blocked_inBounds := by decide

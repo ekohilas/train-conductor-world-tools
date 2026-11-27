@@ -35,6 +35,11 @@ class Instance:
                 raise ValueError(f"Terminal {cell} is on a blocked cell.")
         if set(self.ports) & set(self.cities):
             raise ValueError("A name is used for both a port and a city.")
+        for cell in self.blocked:
+            if not self.in_bounds(cell):
+                raise ValueError(f"Blocked cell {cell} out of bounds.")
+        if not 1 <= self.k <= len(self.cities):
+            raise ValueError(f"k={self.k} must satisfy 1 <= k <= number of cities.")
 
     @property
     def terminals(self) -> frozenset[Cell]:

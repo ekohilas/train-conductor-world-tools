@@ -89,3 +89,25 @@ def test_cpsat_matches_brute_force(seed):
     report = verify.check(inst, sol)
     assert report.ok, report.errors
     assert report.cost == expected, (report.cost, expected, inst.to_json())
+
+
+def test_rejects_blocked_cell_outside_grid():
+    with pytest.raises(ValueError, match="Blocked cell"):
+        Instance(width=3, height=1, blocked=frozenset({(5000, 7)}), k=1,
+                 ports={"P": (0, 0)}, cities={"C": (2, 0)})
+
+
+def test_rejects_k_above_city_count():
+    with pytest.raises(ValueError, match="k="):
+        Instance(width=3, height=1, blocked=frozenset(), k=2,
+                 ports={"P": (0, 0)}, cities={"C": (2, 0)})
+
+
+def test_port_next_to_city_uses_direct_edge():
+    # The port is adjacent to its only city, so the optimum is the direct terminal edge
+    # with no track tile at all.
+    inst = Instance(width=2, height=2, blocked=frozenset(), k=1,
+                    ports={"P": (0, 0)}, cities={"C": (1, 0)})
+    sol, stats = cpsat.solve(inst, time_limit=30)
+    report = verify.check(inst, sol)
+    assert report.ok and (report.excess, report.tiles) == (0, 0)

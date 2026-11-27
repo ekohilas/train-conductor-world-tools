@@ -29,11 +29,13 @@ structure Instance where
   cities : Finset Cell
   k : ℕ
   k_pos : 0 < k
+  k_le_cities : k ≤ cities.card
   ports_cities : Disjoint ports cities
   ports_unblocked : Disjoint ports blocked
   cities_unblocked : Disjoint cities blocked
   ports_inBounds : ∀ p ∈ ports, p.1 < W ∧ p.2 < H
   cities_inBounds : ∀ c ∈ cities, c.1 < W ∧ c.2 < H
+  blocked_inBounds : ∀ b ∈ blocked, b.1 < W ∧ b.2 < H
 
 namespace Instance
 

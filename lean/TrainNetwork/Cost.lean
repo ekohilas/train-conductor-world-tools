@@ -15,8 +15,8 @@ An algorithm is written in `TimeM`. Its running time is the `time` field, which 
   never inside the algorithm being timed.
 
 The input size of an instance is `Instance.size` below: `N = W * H + 1`, the size of
-the dense grid encoding (one symbol per cell). Ports, cities and blocked cells all fit
-in that grid, and `k ≤ |cities| ≤ N` for any instance with a feasible solution.
+the dense grid encoding (one symbol per cell). Ports, cities and blocked cells all lie
+inside the grid, so each of these sets has at most `N` elements, and `k ≤ |cities| ≤ N`.
 -/
 import TrainNetwork.Problem
 
