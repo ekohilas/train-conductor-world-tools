@@ -32,13 +32,15 @@ variable (selfT : κ → S → TimeM (Option ℕ)) (linkT : κ → S → κ → 
 def bestLink (k : κ) (s : S) (k' : κ) : List (Entry S) → TimeM (Option (ℕ × List S))
   | [] => pure none
   | (s', c', w') :: T => do
-      tick
+      -- pattern match, recursive call, one result tuple
+      tickN 3
       let r ← bestLink k s k' T
       let b ← linkT k s k' s'
       if b then
         match r with
         | none => pure (some (c', w'))
         | some (c, w) => do
+            -- one comparison
             tick
             if c' ≤ c then pure (some (c', w')) else pure (some (c, w))
       else pure r
@@ -47,20 +49,23 @@ def bestLink (k : κ) (s : S) (k' : κ) : List (Entry S) → TimeM (Option (ℕ 
 def initT (k : κ) : List S → TimeM (List (Entry S))
   | [] => pure []
   | s :: ss => do
-      tick
+      -- pattern match, recursive call
+      tickN 2
       let rest ← initT k ss
       let c? ← selfT k s
       match c? with
       | none => pure rest
       | some c => do
-          tick
+          -- two list cells, one tuple
+          tickN 3
           pure ((s, c, [s]) :: rest)
 
 /-- Table of layer `k`, given the table `T` of the following layer `k'`. -/
 def extendT (k k' : κ) (T : List (Entry S)) : List S → TimeM (List (Entry S))
   | [] => pure []
   | s :: ss => do
-      tick
+      -- pattern match, recursive call
+      tickN 2
       let rest ← extendT k k' T ss
       let c? ← selfT k s
       match c? with
@@ -70,14 +75,20 @@ def extendT (k k' : κ) (T : List (Entry S)) : List S → TimeM (List (Entry S))
           match r with
           | none => pure rest
           | some (c', w') => do
-              tickN 2
+              -- one addition, two list cells, one tuple
+              tickN 4
               pure ((s, c + c', s :: w') :: rest)
 
 /-- Table of the first layer of `layers`, computed from the last layer backwards. -/
 def tables (cands : List S) : List κ → TimeM (List (Entry S))
   | [] => pure []
-  | [k] => initT selfT k cands
+  | [k] => do
+      -- pattern match
+      tick
+      initT selfT k cands
   | k :: k' :: ks => do
+      -- pattern match, recursive call
+      tickN 2
       let T ← tables cands (k' :: ks)
       extendT selfT linkT k k' T cands
 
@@ -85,11 +96,13 @@ def tables (cands : List S) : List κ → TimeM (List (Entry S))
 def argminT : List (Entry S) → TimeM (Option (ℕ × List S))
   | [] => pure none
   | (_, c, w) :: T => do
-      tick
+      -- pattern match, recursive call
+      tickN 2
       let r ← argminT T
       match r with
       | none => pure (some (c, w))
       | some (c', w') => do
+          -- one comparison
           tick
           if c ≤ c' then pure (some (c, w)) else pure (some (c', w'))
 
@@ -98,6 +111,8 @@ def run (cands : List S) (layers : List κ) : TimeM (Option (ℕ × List S)) :=
   match layers with
   | [] => pure (some (0, []))
   | _ :: _ => do
+      -- pattern match
+      tick
       let T ← tables selfT linkT cands layers
       argminT T
 
@@ -339,7 +354,7 @@ theorem tables_inv (cands : List S) (k : κ) (ks : List κ) :
   | nil =>
       constructor
       · intro e he
-        simp only [tables] at he
+        simp only [tables, bind_val] at he
         obtain ⟨s, hs, c, hc, rfl⟩ := mem_initT.mp he
         refine ⟨valid_single.mpr ⟨s, rfl, hs, by simp [hc]⟩, rfl, ?_⟩
         simp [cost, hc]
@@ -347,7 +362,7 @@ theorem tables_inv (cands : List S) (k : κ) (ks : List κ) :
         obtain ⟨s, rfl, hs, hsome⟩ := valid_single.mp hw
         obtain ⟨c, hc⟩ := Option.isSome_iff_exists.mp hsome
         refine ⟨(s, c, [s]), ?_, rfl, ?_⟩
-        · simp only [tables]
+        · simp only [tables, bind_val]
           exact mem_initT.mpr ⟨s, hs, c, hc, rfl⟩
         · simp [cost, hc]
   | cons k' ks ih =>
@@ -540,14 +555,14 @@ variable {selfT : κ → S → TimeM (Option ℕ)} {linkT : κ → S → κ → 
 
 theorem bestLink_time_le (k : κ) (s : S) (k' : κ) (T : List (Entry S)) (cL : ℕ)
     (h : ∀ e ∈ T, (linkT k s k' e.1).time ≤ cL) :
-    (bestLink linkT k s k' T).time ≤ T.length * (cL + 2) := by
+    (bestLink linkT k s k' T).time ≤ T.length * (cL + 4) := by
   induction T with
   | nil => simp [bestLink]
   | cons e T ih =>
       obtain ⟨s', c', w'⟩ := e
       have h1 : (linkT k s k' s').time ≤ cL := h (s', c', w') (by simp)
       have h2 := ih (fun e he => h e (List.mem_cons_of_mem _ he))
-      simp only [bestLink, bind_time, tick_time, List.length_cons]
+      simp only [bestLink, bind_time, tickN_time, List.length_cons]
       cases hb : (linkT k s k' s').val <;> cases hr : (bestLink linkT k s k' T).val
       · simp only [Bool.false_eq_true, ite_false, pure_time]; nlinarith
       · simp only [Bool.false_eq_true, ite_false, pure_time]; nlinarith
@@ -559,21 +574,21 @@ theorem bestLink_time_le (k : κ) (s : S) (k' : κ) (T : List (Entry S)) (cL : �
 
 theorem initT_time_le (k : κ) (ss : List S) (cS : ℕ)
     (h : ∀ s ∈ ss, (selfT k s).time ≤ cS) :
-    (initT selfT k ss).time ≤ ss.length * (cS + 2) := by
+    (initT selfT k ss).time ≤ ss.length * (cS + 5) := by
   induction ss with
   | nil => simp [initT]
   | cons s ss ih =>
       have h1 := h s (by simp)
       have h2 := ih (fun t ht => h t (List.mem_cons_of_mem _ ht))
-      simp only [initT, bind_time, tick_time, List.length_cons]
+      simp only [initT, bind_time, tickN_time, List.length_cons]
       cases hc : (selfT k s).val with
       | none => simp only [pure_time]; nlinarith
-      | some c => simp only [bind_time, tick_time, pure_time]; nlinarith
+      | some c => simp only [bind_time, tickN_time, pure_time]; nlinarith
 
 theorem extendT_time_le (k k' : κ) (T : List (Entry S)) (ss : List S) (cS cL : ℕ)
     (hS : ∀ s ∈ ss, (selfT k s).time ≤ cS)
     (hL : ∀ s ∈ ss, ∀ e ∈ T, (linkT k s k' e.1).time ≤ cL) :
-    (extendT selfT linkT k k' T ss).time ≤ ss.length * (cS + T.length * (cL + 2) + 3) := by
+    (extendT selfT linkT k k' T ss).time ≤ ss.length * (cS + T.length * (cL + 4) + 6) := by
   induction ss with
   | nil => simp [extendT]
   | cons s ss ih =>
@@ -581,7 +596,7 @@ theorem extendT_time_le (k k' : κ) (T : List (Entry S)) (ss : List S) (cS cL : 
       have h2 := ih (fun t ht => hS t (List.mem_cons_of_mem _ ht))
         (fun t ht => hL t (List.mem_cons_of_mem _ ht))
       have h3 := bestLink_time_le k s k' T cL (hL s (by simp))
-      simp only [extendT, bind_time, tick_time, List.length_cons]
+      simp only [extendT, bind_time, tickN_time, List.length_cons]
       cases hc : (selfT k s).val with
       | none => simp only [pure_time]; nlinarith
       | some c =>
@@ -597,7 +612,7 @@ theorem fst_mem_tables {cands : List S} {layers : List κ} {e : Entry S}
   match layers with
   | [] => simp [tables] at he
   | [k] =>
-      simp only [tables] at he
+      simp only [tables, bind_val] at he
       obtain ⟨s, hs, c, -, rfl⟩ := mem_initT.mp he
       exact hs
   | k :: k' :: ks =>
@@ -611,13 +626,13 @@ theorem tables_time_le (cands : List S) (cS cL : ℕ) :
       (∀ k ∈ layers, ∀ k' ∈ layers, ∀ s ∈ cands, ∀ s' ∈ cands,
         (linkT k s k' s').time ≤ cL) →
       (tables selfT linkT cands layers).time ≤
-        layers.length * (cands.length * (cS + cands.length * (cL + 2) + 3))
+        layers.length * (cands.length * (cS + cands.length * (cL + 4) + 6) + 2)
   | [], _, _ => by simp [tables]
   | [k], hS, _ => by
       have h1 := initT_time_le (selfT := selfT) k cands cS (hS k (by simp))
-      have h2 : cands.length * (cS + 2) ≤ cands.length * (cS + cands.length * (cL + 2) + 3) :=
+      have h2 : cands.length * (cS + 5) ≤ cands.length * (cS + cands.length * (cL + 4) + 6) :=
         Nat.mul_le_mul_left _ (by omega)
-      simp only [tables, List.length_cons, List.length_nil]
+      simp only [tables, bind_time, tick_time, List.length_cons, List.length_nil]
       omega
   | k :: k' :: ks, hS, hL => by
       have ih := tables_time_le cands cS cL (k' :: ks)
@@ -627,21 +642,21 @@ theorem tables_time_le (cands : List S) (cS cL : ℕ) :
       have hext := extendT_time_le (selfT := selfT) (linkT := linkT) k k'
         (tables selfT linkT cands (k' :: ks)).val cands cS cL (hS k (by simp))
         (fun s hs e he => hL k (by simp) k' (by simp) s hs e.1 (fst_mem_tables he))
-      simp only [tables, bind_time, List.length_cons] at ih ⊢
-      have hmono : cands.length * (cS + (tables selfT linkT cands (k' :: ks)).val.length * (cL + 2) + 3)
-          ≤ cands.length * (cS + cands.length * (cL + 2) + 3) := by
+      simp only [tables, bind_time, tickN_time, List.length_cons] at ih ⊢
+      have hmono : cands.length * (cS + (tables selfT linkT cands (k' :: ks)).val.length * (cL + 4) + 6)
+          ≤ cands.length * (cS + cands.length * (cL + 4) + 6) := by
         apply Nat.mul_le_mul_left
-        have : (tables selfT linkT cands (k' :: ks)).val.length * (cL + 2)
-            ≤ cands.length * (cL + 2) := Nat.mul_le_mul_right _ hlen
+        have : (tables selfT linkT cands (k' :: ks)).val.length * (cL + 4)
+            ≤ cands.length * (cL + 4) := Nat.mul_le_mul_right _ hlen
         omega
       nlinarith
 
-theorem argminT_time_le (T : List (Entry S)) : (argminT T).time ≤ 2 * T.length := by
+theorem argminT_time_le (T : List (Entry S)) : (argminT T).time ≤ 3 * T.length := by
   induction T with
   | nil => simp [argminT]
   | cons e T ih =>
       obtain ⟨s, c, w⟩ := e
-      simp only [argminT, bind_time, tick_time, List.length_cons]
+      simp only [argminT, bind_time, tickN_time, List.length_cons]
       cases hr : (argminT T).val with
       | none => simp only [pure_time]; omega
       | some p =>
@@ -649,21 +664,22 @@ theorem argminT_time_le (T : List (Entry S)) : (argminT T).time ≤ 2 * T.length
           by_cases hc : c ≤ c' <;>
             simp only [bind_time, tick_time, hc, ite_true, ite_false, pure_time] <;> omega
 
-/-- Running time of the layered DP: `n · |cands| · (c_self + |cands| · (c_link + 2) + 3)`
+/-- Running time of the layered DP: `n · |cands| · (c_self + |cands| · (c_link + 4) + 6)`
 plus lower-order terms. -/
 theorem run_time_le (cands : List S) (cS cL : ℕ) (layers : List κ)
     (hS : ∀ k ∈ layers, ∀ s ∈ cands, (selfT k s).time ≤ cS)
     (hL : ∀ k ∈ layers, ∀ k' ∈ layers, ∀ s ∈ cands, ∀ s' ∈ cands,
       (linkT k s k' s').time ≤ cL) :
     (run selfT linkT cands layers).time ≤
-      layers.length * (cands.length * (cS + cands.length * (cL + 2) + 3)) + 2 * cands.length := by
+      layers.length * (cands.length * (cS + cands.length * (cL + 4) + 6) + 2) +
+        3 * cands.length + 1 := by
   cases layers with
   | nil => simp [run]
   | cons k ks =>
       have h1 := tables_time_le (selfT := selfT) (linkT := linkT) cands cS cL (k :: ks) hS hL
       have h2 := argminT_time_le (tables selfT linkT cands (k :: ks)).val
       have h3 := length_tables_le (selfT := selfT) (linkT := linkT) cands (k :: ks)
-      simp only [run, bind_time]
+      simp only [run, bind_time, tick_time]
       omega
 
 end Time

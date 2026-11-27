@@ -317,7 +317,11 @@ def predOK (δ : Dir) (pa : PKind) (ea : DEntry) (pb : PKind) (eb : DEntry) : Bo
 
 /-- Both predecessor conditions between `a` and its `δ`-neighbour `b`, for port `j`. -/
 def predAt (δ : Dir) (ka : Kind) (a : Lab) (kb : Kind) (b : Lab) (j : ℕ) : Bool :=
-  predOK δ (ka.p j) (a.d j) (kb.p j) (b.d j) && predOK δ.opp (kb.p j) (b.d j) (ka.p j) (a.d j)
+  let pa := ka.p j
+  let ea := a.d j
+  let pb := kb.p j
+  let eb := b.d j
+  predOK δ pa ea pb eb && predOK δ.opp pb eb pa ea
 
 def predsT (δ : Dir) (ka : Kind) (a : Lab) (kb : Kind) (b : Lab) : ℕ → TimeM Bool
   | 0 => pure true
@@ -463,9 +467,9 @@ instance (I : Instance) (x : Cell) : Decidable (I.IsFree x) := by
   unfold Instance.IsFree Instance.InBounds Instance.IsTerminal; infer_instance
 
 /-- An upper bound on the number of primitive steps of one `IsOpen`/`IsFree` test: two
-coordinate comparisons, and a linear scan of each of the three finite sets (two `ℕ`
-comparisons per element). -/
-def scanCost (I : Instance) : ℕ := 2 * (I.blocked.card + I.ports.card + I.cities.card) + 4
+coordinate comparisons, and a linear scan of each of the three finite sets (per element:
+one step along the set and two `ℕ` comparisons). -/
+def scanCost (I : Instance) : ℕ := 3 * (I.blocked.card + I.ports.card + I.cities.card) + 4
 
 /-- Per-port data of cell `x`, where `fr` says whether `x` is free. -/
 def pkOf (fr : Bool) (x : Cell) (e : Cell × List (Cell × ℕ)) : PKind :=
@@ -474,8 +478,9 @@ def pkOf (fr : Bool) (x : Cell) (e : Cell × List (Cell × ℕ)) : PKind :=
 def ppT (fr : Bool) (x : Cell) : PD → TimeM (List PKind)
   | [] => pure []
   | (p, dl) :: pd => do
-      -- two coordinate comparisons, one allocation, bookkeeping
-      tickN 4
+      -- pattern match, recursive call, two cell comparisons (two `ℕ` comparisons each),
+      -- one record, one list cell
+      tickN 8
       let g ← tlookup x dl
       let rest ← ppT fr x pd
       pure (⟨decide (x = p), fr || decide (x = p), g⟩ :: rest)
@@ -488,7 +493,7 @@ theorem ppT_val (fr : Bool) (x : Cell) (pd : PD) : (ppT fr x pd).val = pd.map (p
       simp [ppT, ih, pkOf]
 
 theorem ppT_time (fr : Bool) (x : Cell) (pd : PD) (c : ℕ)
-    (h : ∀ e ∈ pd, e.2.length ≤ c) : (ppT fr x pd).time ≤ pd.length * (3 * c + 4) := by
+    (h : ∀ e ∈ pd, e.2.length ≤ c) : (ppT fr x pd).time ≤ pd.length * (4 * c + 8) := by
   induction pd with
   | nil => simp [ppT]
   | cons e pd ih =>
@@ -506,8 +511,9 @@ def allowOf (I : Instance) (x : Cell) (δ : Dir) : Bool :=
 
 /-- The kind of cell `x` in the run with port data `pd`. -/
 def kindT (I : Instance) (pd : PD) (x : Cell) : TimeM Kind := do
-  -- six open/free tests, four neighbour coordinates and boundary tests, bookkeeping
-  tickN (6 * scanCost I + 16)
+  -- ten open/free tests (two `IsFree`, and two `IsOpen` for each of the four directions),
+  -- four neighbour coordinates, two boundary comparisons, one record
+  tickN (10 * scanCost I + 16)
   let pp ← ppT (decide (I.IsFree x)) x pd
   pure { free := decide (I.IsFree x)
          aR := allowOf I x .R
@@ -551,7 +557,7 @@ theorem kindOf_allow (I : Instance) (pd : PD) (x : Cell) (δ : Dir) :
 
 theorem kindT_time (I : Instance) (pd : PD) (x : Cell) (c : ℕ)
     (h : ∀ e ∈ pd, e.2.length ≤ c) :
-    (kindT I pd x).time ≤ 6 * scanCost I + 16 + pd.length * (3 * c + 4) := by
+    (kindT I pd x).time ≤ 10 * scanCost I + 16 + pd.length * (4 * c + 8) := by
   have := ppT_time (decide (I.IsFree x)) x pd c h
   simp only [kindT, bind_time, tickN_time, pure_time]
   omega

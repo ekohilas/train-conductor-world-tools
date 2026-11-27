@@ -77,17 +77,23 @@ minimum certified cost and a labelling attaining it (as a list of layer states).
 def dpRun (I : Instance) (pd : PD) (β : ℕ) : TimeM (Option (ℕ × List (List Lab))) := do
   -- one comparison, one multiplication, one addition, the length of `pd`, bookkeeping
   tickN (pd.length + 6)
-  let labs ← labsT pd.length (I.W * I.H + 1)
+  let col := decide (I.H ≤ I.W)
+  let n := nOf col I.W I.H
+  let m := mOf col I.W I.H
+  let M := I.W * I.H + 1
+  let labs ← labsT pd.length M
   -- `List.replicate`
-  tickN (mOf (decide (I.H ≤ I.W)) I.W I.H + 1)
-  let cands ← tsections (List.replicate (mOf (decide (I.H ≤ I.W)) I.W I.H) labs)
-  -- the two `List.range`s
-  tickN (nOf (decide (I.H ≤ I.W)) I.W I.H + mOf (decide (I.H ≤ I.W)) I.W I.H + 2)
-  let layers ← tmapM (fun i => tmapM (fun j => kindT I pd (emb (decide (I.H ≤ I.W)) i j))
-      (List.range (mOf (decide (I.H ≤ I.W)) I.W I.H)))
-    (List.range (nOf (decide (I.H ≤ I.W)) I.W I.H))
-  LayerDP.run (gSelf β (I.W * I.H + 1) (dWOf (decide (I.H ≤ I.W))))
-    (gLink (dAOf (decide (I.H ≤ I.W)))) cands layers
+  tickN (m + 1)
+  let cands ← tsections (List.replicate m labs)
+  -- the two `List.range`s, each computed once
+  tickN (n + m + 2)
+  let is := List.range n
+  let js := List.range m
+  let layers ← tmapM (fun i => tmapM (fun j => do
+      -- the pair built by `emb`
+      tick
+      kindT I pd (emb col i j)) js) is
+  LayerDP.run (gSelf β M (dWOf col)) (gLink (dAOf col)) cands layers
 
 theorem dpRun_val (I : Instance) (pd : PD) (β : ℕ) :
     (dpRun I pd β).val =

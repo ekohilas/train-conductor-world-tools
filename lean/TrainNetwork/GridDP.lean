@@ -77,9 +77,13 @@ def labsT (q n : ℕ) : TimeM (List Lab) := do
   tickN (q + 1)
   let dss ← tsections (List.replicate q es)
   let r ← tmapM (fun ds => tmapM
-      (fun (e : Bool × Bool × Bool × Bool) => pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab))
+      (fun (e : Bool × Bool × Bool × Bool) => do
+        -- one record
+        tick
+        pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab))
       bools4) dss
-  tickN (16 * dss.length + 1)
+  -- flattening `|dss|` lists of length 16
+  tickN (17 * dss.length + 1)
   pure r.flatten
 
 theorem mem_labsT {q n : ℕ} {a : Lab} (hlen : a.ds.length = q)
@@ -105,21 +109,23 @@ theorem length_labsT_le (q n : ℕ) : (labsT q n).val.length ≤ 16 * (4 * n + 2
   omega
 
 theorem labsT_time_le (q n : ℕ) :
-    (labsT q n).time ≤ 16 * n + q + 18 + (3 * q + 33) * (4 * n + 2) ^ q := by
+    (labsT q n).time ≤ 16 * n + q + 18 + (8 * q + 84) * (4 * n + 2) ^ q := by
   have h1 := length_sections_le (List.replicate q (entryListT n).val)
   rw [prodSucc_replicate, length_entryListT] at h1
   have h2 := tsections_time_le (List.replicate q (entryListT n).val)
   rw [prodSucc_replicate, length_entryListT, List.length_replicate] at h2
   have hinner : ∀ ds ∈ (List.replicate q (entryListT n).val).sections,
       (tmapM (fun (e : Bool × Bool × Bool × Bool) =>
-        (pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab) : TimeM Lab)) bools4).time ≤ 16 := by
+        (do tick; pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab) : TimeM Lab)) bools4).time
+        ≤ 64 := by
     intro ds _
     have := tmapM_time_le (fun (e : Bool × Bool × Bool × Bool) =>
-        (pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab) : TimeM Lab)) bools4 0 (by simp)
+        (do tick; pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab) : TimeM Lab)) bools4 1
+        (by simp)
     simpa [bools4] using this
   have h3 := tmapM_time_le (fun ds => tmapM (fun (e : Bool × Bool × Bool × Bool) =>
-        (pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab) : TimeM Lab)) bools4)
-      (List.replicate q (entryListT n).val).sections 16 hinner
+        (do tick; pure (⟨e.1, e.2.1, e.2.2.1, e.2.2.2, ds⟩ : Lab) : TimeM Lab)) bools4)
+      (List.replicate q (entryListT n).val).sections 64 hinner
   have h0 : (entryListT n).time = 16 * n + 16 := by simp [entryListT]
   simp only [labsT, bind_time, pure_time, tickN_time, tsections_val, h0]
   have h4 : 4 * n + 1 + 1 = 4 * n + 2 := by omega
@@ -128,18 +134,18 @@ theorem labsT_time_le (q n : ℕ) :
 
 /-! ## Checks on a whole layer -/
 
-/-- The pair check between cell `j` of a layer and the next cell of the same layer, if
-there is one. -/
-def withinT (dW : Dir) (ks : List Kind) (as : List Lab) (m j : ℕ) : TimeM Bool :=
+/-- The pair check between cell `j` of a layer (kind `k`, label `a`) and the next cell
+of the same layer, if there is one. -/
+def withinT (dW : Dir) (k : Kind) (a : Lab) (ks : List Kind) (as : List Lab) (m j : ℕ) :
+    TimeM Bool :=
   if j + 1 < m then
-    pairT dW (ks.getD j default) (as.getD j default)
-      (ks.getD (j + 1) default) (as.getD (j + 1) default)
+    pairT dW k a (ks.getD (j + 1) default) (as.getD (j + 1) default)
   else pure true
 
-theorem withinT_val (dW : Dir) (ks : List Kind) (as : List Lab) (m j : ℕ) :
-    (withinT dW ks as m j).val = true ↔
-      (j + 1 < m → PairOK dW (ks.getD j default) (as.getD j default)
-        (ks.getD (j + 1) default) (as.getD (j + 1) default)) := by
+theorem withinT_val (dW : Dir) (k : Kind) (a : Lab) (ks : List Kind) (as : List Lab)
+    (m j : ℕ) :
+    (withinT dW k a ks as m j).val = true ↔
+      (j + 1 < m → PairOK dW k a (ks.getD (j + 1) default) (as.getD (j + 1) default)) := by
   unfold withinT
   by_cases hj : j + 1 < m
   · simp [hj, pairT_val]
@@ -151,12 +157,15 @@ def colSelfT (β M : ℕ) (dW : Dir) (ks : List Kind) (as : List Lab) (m : ℕ) 
     ℕ → TimeM (Option ℕ)
   | 0 => pure (some 0)
   | j + 1 => do
-      -- four list accesses at indices ≤ j + 1, one comparison, one addition, bookkeeping
+      -- recursive call; four list accesses (indices `j`, `j`, `j + 1`, `j + 1`: at most
+      -- `4 j + 6` steps); two additions, one comparison, one result
       tickN (4 * j + 14)
       let r ← colSelfT β M dW ks as m j
-      let u ← unaryT β (ks.getD j default) (as.getD j default)
-      let p ← withinT dW ks as m j
-      let c ← cellCostT M (ks.getD j default) (as.getD j default)
+      let k := ks.getD j default
+      let a := as.getD j default
+      let u ← unaryT β k a
+      let p ← withinT dW k a ks as m j
+      let c ← cellCostT M k a
       pure (match r with
         | some t => if u && p then some (t + c) else none
         | none => none)
@@ -185,7 +194,7 @@ theorem colSelfT_val (β M : ℕ) (dW : Dir) (ks : List Kind) (as : List Lab) (m
       | some t =>
           obtain ⟨hall, ht⟩ := (ih t).mp hr
           by_cases hup : ((unaryT β (ks.getD q default) (as.getD q default)).val &&
-              (withinT dW ks as m q).val) = true
+              (withinT dW (ks.getD q default) (as.getD q default) ks as m q).val) = true
           · have hup' := hup
             rw [Bool.and_eq_true, unaryT_val, withinT_val] at hup'
             simp only [hup, ite_true, Option.some.injEq]
@@ -225,7 +234,8 @@ theorem colSelfT_time_le (β M : ℕ) (dW : Dir) (ks : List Kind) (as : List Lab
   | succ q ih =>
       have hk := getD_pp_le hQ q
       have h1 := unaryT_time_le (β := β) (a := as.getD q default) hk
-      have h2 : (withinT dW ks as m q).time ≤ cellBound Q := by
+      have h2 : (withinT dW (ks.getD q default) (as.getD q default) ks as m q).time
+          ≤ cellBound Q := by
         unfold withinT
         by_cases hq : q + 1 < m
         · simp only [hq, ite_true]
@@ -240,7 +250,7 @@ def colLinkT (dA : Dir) (ks : List Kind) (as : List Lab) (ks' : List Kind) (as' 
     ℕ → TimeM Bool
   | 0 => pure true
   | j + 1 => do
-      -- four list accesses at index `j`, bookkeeping
+      -- recursive call; four list accesses at index `j` (`4 j + 4` steps)
       tickN (4 * j + 8)
       let r ← colLinkT dA ks as ks' as' j
       let p ← pairT dA (ks.getD j default) (as.getD j default)
@@ -277,12 +287,15 @@ theorem colLinkT_time_le (dA : Dir) (ks : List Kind) (as : List Lab) (ks' : List
 
 /-- Self-check of the grid DP. -/
 def gSelf (β M : ℕ) (dW : Dir) (ks : List Kind) (as : List Lab) : TimeM (Option ℕ) := do
+  -- the length of `ks`, computed once
   tickN (ks.length + 1)
-  colSelfT β M dW ks as ks.length ks.length
+  let m := ks.length
+  colSelfT β M dW ks as m m
 
 /-- Link-check of the grid DP. -/
 def gLink (dA : Dir) (ks : List Kind) (as : List Lab) (ks' : List Kind) (as' : List Lab) :
     TimeM Bool := do
+  -- the length of `ks`
   tickN (ks.length + 1)
   colLinkT dA ks as ks' as' ks.length
 

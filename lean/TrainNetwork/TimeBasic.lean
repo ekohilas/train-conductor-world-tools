@@ -1,7 +1,13 @@
 /-
-Generic `TimeM` building blocks: every loop iteration and every produced list cell is
-charged at least one `tick`. For each combinator we prove what value it computes and an
-upper bound on its running time.
+Generic `TimeM` building blocks. For each combinator we prove what value it computes and
+an upper bound on its running time.
+
+Charging convention (used in the whole development): the number passed to `tick`/`tickN`
+at the start of a loop body is at least the number of primitive operations the body
+performs itself (not counting the functions it calls, which charge for themselves):
+one per pattern match on a list, per recursive call, per allocated list cell or tuple,
+per `ℕ` arithmetic operation or comparison, and `i + 1` for a list access at index `i`.
+Comparing two cells costs two `ℕ` comparisons.
 
 Convention used throughout the development: the specification of a `TimeM` program is
 its `.val`; there is no separate "pure" copy of the algorithms.
@@ -13,11 +19,12 @@ namespace TimeM
 
 variable {α β : Type}
 
-/-- Map `f` over a list: one tick per element, plus the cost of `f`. -/
+/-- Map `f` over a list. Per element: pattern match, recursive call, one list cell;
+plus the cost of `f`. -/
 def tmapM (f : α → TimeM β) : List α → TimeM (List β)
   | [] => pure []
   | a :: l => do
-      tick
+      tickN 3
       let b ← f a
       let bs ← tmapM f l
       pure (b :: bs)
@@ -29,20 +36,21 @@ def tmapM (f : α → TimeM β) : List α → TimeM (List β)
   | cons a l ih => simp [tmapM, ih]
 
 theorem tmapM_time_le (f : α → TimeM β) (l : List α) (c : ℕ)
-    (h : ∀ a ∈ l, (f a).time ≤ c) : (tmapM f l).time ≤ l.length * (c + 1) := by
+    (h : ∀ a ∈ l, (f a).time ≤ c) : (tmapM f l).time ≤ l.length * (c + 3) := by
   induction l with
   | nil => simp [tmapM]
   | cons a l ih =>
       have h1 := h a (by simp)
       have h2 := ih (fun b hb => h b (by simp [hb]))
-      simp only [tmapM, bind_time, tick_time, pure_time, List.length_cons]
+      simp only [tmapM, bind_time, tickN_time, pure_time, List.length_cons]
       nlinarith
 
-/-- Filter a list by a `TimeM` predicate: one tick per element, plus the cost of `p`. -/
+/-- Filter a list by a `TimeM` predicate. Per element: pattern match, recursive call,
+at most one list cell; plus the cost of `p`. -/
 def tfilterM (p : α → TimeM Bool) : List α → TimeM (List α)
   | [] => pure []
   | a :: l => do
-      tick
+      tickN 3
       let b ← p a
       let r ← tfilterM p l
       pure (if b then a :: r else r)
@@ -55,24 +63,28 @@ def tfilterM (p : α → TimeM Bool) : List α → TimeM (List α)
       simp only [tfilterM, bind_val, pure_val, ih, List.filter_cons]
 
 theorem tfilterM_time_le (p : α → TimeM Bool) (l : List α) (c : ℕ)
-    (h : ∀ a ∈ l, (p a).time ≤ c) : (tfilterM p l).time ≤ l.length * (c + 1) := by
+    (h : ∀ a ∈ l, (p a).time ≤ c) : (tfilterM p l).time ≤ l.length * (c + 3) := by
   induction l with
   | nil => simp [tfilterM]
   | cons a l ih =>
       have h1 := h a (by simp)
       have h2 := ih (fun b hb => h b (by simp [hb]))
-      simp only [tfilterM, bind_time, tick_time, pure_time, List.length_cons]
+      simp only [tfilterM, bind_time, tickN_time, pure_time, List.length_cons]
       nlinarith
 
-/-- All ways of picking one element from each list (`List.sections`). One tick per
-produced list cell, and the final flattening is charged at its output length. -/
+/-- All ways of picking one element from each list (`List.sections`). Every produced
+list cell is charged, and flattening `|S|` lists of length `|l|` is charged at
+`|S| · |l| + |S| + 1`. -/
 def tsections : List (List α) → TimeM (List (List α))
   | [] => pure [[]]
   | l :: L => do
-      tick
+      -- pattern match, recursive call
+      tickN 2
       let S ← tsections L
-      let r ← tmapM (fun s => tmapM (fun a => pure (a :: s)) l) S
-      tickN (S.length * l.length)
+      let r ← tmapM (fun s => tmapM (fun a => do
+        tick
+        pure (a :: s)) l) S
+      tickN (S.length * l.length + S.length + 1)
       pure r.flatten
 
 @[simp] theorem tsections_val (L : List (List α)) : (tsections L).val = L.sections := by
@@ -100,34 +112,40 @@ theorem length_sections_le (L : List (List α)) : L.sections.length ≤ prodSucc
       nlinarith
 
 theorem tsections_time_le (L : List (List α)) :
-    (tsections L).time ≤ 3 * L.length * prodSucc L := by
+    (tsections L).time ≤ 8 * L.length * prodSucc L := by
   induction L with
   | nil => simp [tsections]
   | cons l L ih =>
       have hS := length_sections_le L
       have hpos := prodSucc_pos L
       have hinner : ∀ s ∈ L.sections,
-          (tmapM (fun a => (pure (a :: s) : TimeM (List α))) l).time ≤ l.length := by
+          (tmapM (fun a => (do tick; pure (a :: s) : TimeM (List α))) l).time
+            ≤ l.length * 4 := by
         intro s _
-        have := tmapM_time_le (fun a => (pure (a :: s) : TimeM (List α))) l 0 (by simp)
-        simpa using this
-      have hmap := tmapM_time_le (fun s => tmapM (fun a => (pure (a :: s) : TimeM (List α))) l)
-        L.sections l.length hinner
-      simp only [tsections, bind_time, tick_time, pure_time, tickN_time, tsections_val,
+        exact tmapM_time_le (fun a => (do tick; pure (a :: s) : TimeM (List α))) l 1 (by simp)
+      have hmap := tmapM_time_le
+        (fun s => tmapM (fun a => (do tick; pure (a :: s) : TimeM (List α))) l)
+        L.sections (l.length * 4) hinner
+      simp only [tsections, bind_time, pure_time, tickN_time, tsections_val,
         List.length_cons]
       have hP : prodSucc (l :: L) = (l.length + 1) * prodSucc L := by
         simp [prodSucc]
       rw [hP]
+      have h5 : L.sections.length * l.length ≤ prodSucc L * l.length :=
+        Nat.mul_le_mul_right _ hS
       nlinarith
 
-/-- All sublists (`List.sublists'`): one tick per produced list, appends charged at the
-length of the left operand. -/
+/-- All sublists (`List.sublists'`). Every produced list cell is charged; the append is
+charged at the length of its left operand. -/
 def tsublists : List α → TimeM (List (List α))
   | [] => pure [[]]
   | a :: l => do
-      tick
+      -- pattern match, recursive call
+      tickN 2
       let S ← tsublists l
-      let S' ← tmapM (fun s => pure (a :: s)) S
+      let S' ← tmapM (fun s => do
+        tick
+        pure (a :: s)) S
       tickN (S.length + 1)
       pure (S ++ S')
 
@@ -136,25 +154,25 @@ def tsublists : List α → TimeM (List (List α))
   | nil => rfl
   | cons a l ih => simp [tsublists, ih, List.sublists'_cons]
 
-theorem tsublists_time_le (l : List α) : (tsublists l).time ≤ 4 * 2 ^ l.length := by
+theorem tsublists_time_le (l : List α) : (tsublists l).time ≤ 8 * 2 ^ l.length := by
   induction l with
   | nil => simp [tsublists]
   | cons a l ih =>
-      have hmap := tmapM_time_le (fun s => (pure (a :: s) : TimeM (List α))) l.sublists' 0
-        (by simp)
+      have hmap := tmapM_time_le (fun s => (do tick; pure (a :: s) : TimeM (List α)))
+        l.sublists' 1 (by simp)
       have hlen : l.sublists'.length = 2 ^ l.length := List.length_sublists' l
       have hpos : 0 < 2 ^ l.length := by positivity
-      simp only [tsublists, bind_time, tick_time, pure_time, tickN_time, tsublists_val,
+      simp only [tsublists, bind_time, pure_time, tickN_time, tsublists_val,
         List.length_cons, pow_succ]
       rw [hlen] at hmap ⊢
       omega
 
-/-- Association-list lookup keyed by cells: three ticks per visited entry (two `ℕ`
-comparisons and one list step). -/
+/-- Association-list lookup keyed by cells. Per visited entry: pattern match, recursive
+call, two `ℕ` comparisons. -/
 def tlookup (x : Cell) : List (Cell × β) → TimeM (Option β)
   | [] => pure none
   | (y, v) :: l => do
-      tickN 3
+      tickN 4
       if x = y then pure (some v) else tlookup x l
 
 theorem tlookup_some {x : Cell} {l : List (Cell × β)} {v : β}
@@ -196,7 +214,7 @@ theorem tlookup_of_mem {x : Cell} {l : List (Cell × β)} {v : β}
       rw [this]
 
 theorem tlookup_time_le (x : Cell) (l : List (Cell × β)) :
-    (tlookup x l).time ≤ 3 * l.length := by
+    (tlookup x l).time ≤ 4 * l.length := by
   induction l with
   | nil => simp [tlookup]
   | cons e l ih =>
