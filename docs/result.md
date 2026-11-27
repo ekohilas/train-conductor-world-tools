@@ -308,6 +308,14 @@ be precise about what this does and does not show:
   paths question on a planar graph with holes, where homotopy classes with respect to
   the holes cannot be enumerated and no exchange argument is available.
 
+**The open core in one sentence.** By Lemma C and Corollary 3, the first objective
+alone is the following problem: *in a grid with holes, delete one grid edge at every
+crossroads so that the sum of the `m` distances `d_D(p, c)` of the chosen pairs is as
+small as possible.* For one pair it is trivial. We do not know whether it is
+polynomial for a fixed number of pairs, and we could not settle it even for small `m`.
+`exact.py` solves it by branch and bound (step 2 of §6), which is fast on the instances
+we tried, including `europe.json`, but has no polynomial bound.
+
 ### 4.4 Why the Lean goal is out of reach even for the parts that are true
 
 `goal_correct` together with `goal_polytime` requires, as a special case, a
