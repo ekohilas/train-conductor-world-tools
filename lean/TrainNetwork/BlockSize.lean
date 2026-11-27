@@ -170,7 +170,7 @@ theorem edgeAt_cb {v u : Cell} (hv : CellB M v) (hu : CellB M u) :
   · exact cb_of _ (by simp) (by simp; exact sz_vEdge hM hv hu)
 
 theorem edge_block_le (v : Cell) (hv : v.1 + 1 ≤ M ∧ v.2 + 1 ≤ M) :
-    (block 64 (edgeAt I v (v.1 + 1, v.2) ++ edgeAt I v (v.1, v.2 + 1) ++ degAt I v)).time ≤
+    (block 128 (edgeAt I v (v.1 + 1, v.2) ++ edgeAt I v (v.1, v.2 + 1) ++ degAt I v)).time ≤
       Q M := by
   have hv' : CellB M v := ⟨by omega, by omega⟩
   have hr : CellB M (v.1 + 1, v.2) := ⟨hv.1, by show v.2 ≤ M; omega⟩
@@ -178,7 +178,7 @@ theorem edge_block_le (v : Cell) (hv : v.1 + 1 ≤ M ∧ v.2 + 1 ≤ M) :
   have hl : CellB M (v.1 - 1, v.2) := ⟨by show v.1 - 1 ≤ M; omega, by show v.2 ≤ M; omega⟩
   have hu : CellB M (v.1, v.2 - 1) := ⟨by show v.1 ≤ M; omega, by show v.2 - 1 ≤ M; omega⟩
   have hdl : (degAt I v).length ≤ 1 := by unfold degAt; split_ifs <;> simp
-  apply block_le_Q 64 5 M (by omega) (by omega)
+  apply block_le_Q 128 5 M (by omega) (by omega)
   · have h1 := edgeAt_len I v (v.1 + 1, v.2)
     have h2 := edgeAt_len I v (v.1, v.2 + 1)
     simp only [List.length_append]
@@ -199,9 +199,9 @@ theorem edge_block_le (v : Cell) (hv : v.1 + 1 ≤ M ∧ v.2 + 1 ≤ M) :
       · simp at hcl
 
 theorem init_block_le {p v : Cell} (hp : CellB M p) (hv : CellB M v) :
-    (block 1 (if v = p then [[(vGrid p 0 v, true)]]
+    (block 4 (if v = p then [[(vGrid p 0 v, true)]]
       else [[(vGrid p 0 v, false)], [(vNet p 0 v, false)]])).time ≤ Q M := by
-  apply block_le_Q 1 2 M (by omega) (by omega)
+  apply block_le_Q 4 2 M (by omega) (by omega)
   · split_ifs <;> simp
   · intro cl hcl
     split_ifs at hcl
@@ -315,7 +315,7 @@ omit hM in
 theorem counter_step_block_le (cv : ℕ → ℕ → ℕ) (i j : ℕ) (it : List Lit)
     (hit : it.length ≤ 3 ∧ ∀ l ∈ it, Nat.size l.1 ≤ 32 * M)
     (hcv : ∀ i' j', i' ≤ i + 1 → j' ≤ j → Nat.size (cv i' j') ≤ 32 * M) :
-    (block 8 [[(cv i j, false), (cv (i + 1) j, true)],
+    (block 16 [[(cv i j, false), (cv (i + 1) j, true)],
         if j = 0 then negLits it ++ [(cv (i + 1) 0, true)]
         else negLits it ++ [(cv i (j - 1), false), (cv (i + 1) j, true)]]).time ≤ Q M := by
   have hneg : ∀ l ∈ negLits it, Nat.size l.1 ≤ 32 * M := by
@@ -325,7 +325,7 @@ theorem counter_step_block_le (cv : ℕ → ℕ → ℕ) (i j : ℕ) (it : List 
     exact hit.2 l' hl'
   have hnl : (negLits it).length ≤ 3 := by
     unfold negLits; simpa using hit.1
-  apply block_le_Q 8 2 M (by omega) (by omega)
+  apply block_le_Q 16 2 M (by omega) (by omega)
   · simp
   · intro cl hcl
     simp only [List.mem_cons, List.not_mem_nil, or_false] at hcl

@@ -1,13 +1,41 @@
 /-
 The reduction `toK`, written in `TimeM`, and the proof that it outputs `enc I X K`.
 
-Cost accounting (see the auditing rule in `Cost.lean`):
-* every loop iteration is charged one `tick` (`forL`, `counterM`);
-* every list append `x ++ y` is charged `x.length` steps;
-* every block of O(1) clauses is emitted by `block c φ`, which charges `c` steps for the
-  constant number of tests and coordinate operations that select the block, 32 steps per
-  literal for computing its variable index (at most 7 pairings of 4 arithmetic
-  operations each), and the encoding length of the block for writing it.
+Cost accounting (see the auditing rule in `Cost.lean`). Every charge is a `tick` or a
+`tickN`, the latter always through `ret cost x` ("produce `x`, charge `cost`").
+
+* Loops. `forL l f` charges one `tick` per iteration, one for the exit test, the cost
+  of every body, and `x.length` for each append `x ++ rest`. `counterM` is a recursion
+  over the item list: one `tick` per item, plus its inner loop and its append.
+* Lists. `rangeM n` charges `n + 1`: one per element, one for the single arithmetic
+  operation that computes `n` at the call site (`I.W * I.H`, `B + 1`). `nearM` needs two
+  operations for `I.W * I.H + 1` and charges them with `ret 2`. `cellsM` charges 1 per
+  cell and `filterM` 2 per cell (one set lookup, one allocation). `cardM` charges
+  `cl.length + 2` for `cl.length - I.k`.
+* Blocks. All clauses are emitted by `block c φ`, where `φ` is a list of at most 15
+  clauses of at most 6 literals, computed by the pure functions of `Formula.lean` from
+  the loop variables. `block` charges
+    - `wsize φ`, the encoding length of `φ`, for writing it;
+    - 32 per literal for its variable index: at most 7 pairings (`Nat.pair`: one
+      comparison, at most three arithmetic operations), i.e. at most 28 operations;
+    - the constant `c` for everything else done to select the block, counted per site:
+        edge block (128): `isOpenB`/`isFreeB` on three cells (each at most 2
+          comparisons and 3 set lookups, 8 calls), 6 coordinate operations, the tests
+          `1 ≤ v.1`, `1 ≤ v.2`, and appends of lists of length ≤ 5;
+        init block (4): the test `v = p` (two comparisons);
+        step block (128): `nbrs v` (4 coordinate operations, 2 comparisons), `stepsN`
+          (≤ 4 neighbours × (equality test + `isFreeB`)), `stepsG` (≤ 4 × two
+          `isOpenB`), `t + 1`, and maps/appends over lists of length ≤ 4;
+        fin block (4): `I.W * I.H`, twice;
+        near block (0): nothing besides its four literals;
+        counter block (16): `j = 0`, `j - 1`, `i + 1`, `negLits` of an item of ≤ 3
+          literals, and one append.
+  Item lists for the counters are produced by `ret 32` (one literal) or `ret 96` (three
+  literals) per item.
+* The final appends in `toKgen` are charged `3 * e.length + 2 * ps.length + xc.length`.
+
+Set lookups `c ∈ I.blocked`, `c ∈ I.ports`, `c ∈ I.cities` count as one primitive
+operation each, as in the auditing rule ("finset access").
 -/
 import TrainNetwork.Formula
 
@@ -65,7 +93,8 @@ def block (c : ℕ) (φ : List Clause) : TimeM (List Clause) :=
 
 @[simp] theorem block_val (c : ℕ) (φ : List Clause) : (block c φ).val = φ := rfl
 
-/-- `[0, ..., n-1]`, one step per element. -/
+/-- `[0, ..., n-1]`: one step per element, and one step for the (at most one) arithmetic
+operation that computes the bound `n` at the call site. -/
 def rangeM (n : ℕ) : TimeM (List ℕ) := ret (n + 1) (List.range n)
 
 /-- All cells of the grid. -/
@@ -76,15 +105,15 @@ def cellsM (I : Instance) : TimeM (List Cell) := do
 
 /-- The cells of `l` that belong to `s` (one set lookup each). -/
 def filterM (l : List Cell) (s : Finset Cell) : TimeM (List Cell) :=
-  forL l fun c => ret 1 (if c ∈ s then [c] else [])
+  forL l fun c => ret 2 (if c ∈ s then [c] else [])
 
 def edgeM (I : Instance) (cs : List Cell) : TimeM (List Clause) :=
   forL cs fun v =>
-    block 64 (edgeAt I v (v.1 + 1, v.2) ++ edgeAt I v (v.1, v.2 + 1) ++ degAt I v)
+    block 128 (edgeAt I v (v.1 + 1, v.2) ++ edgeAt I v (v.1, v.2 + 1) ++ degAt I v)
 
 def initM (cs : List Cell) (p : Cell) : TimeM (List Clause) :=
   forL cs fun v =>
-    block 1 (if v = p then [[(vGrid p 0 v, true)]]
+    block 4 (if v = p then [[(vGrid p 0 v, true)]]
       else [[(vGrid p 0 v, false)], [(vNet p 0 v, false)]])
 
 def reachM (I : Instance) (cs : List Cell) (p : Cell) : TimeM (List Clause) := do
@@ -97,7 +126,8 @@ def finM (I : Instance) (cl : List Cell) (p : Cell) : TimeM (List Clause) :=
       [(vSel p c, false), (vNet p (I.W * I.H) c, true)]]
 
 def nearM (I : Instance) (cl : List Cell) (p : Cell) : TimeM (List Clause) := do
-  let ts ← rangeM (I.W * I.H + 1)
+  let horizon ← ret 2 (I.W * I.H + 1)
+  let ts ← rangeM horizon
   forL cl fun c => forL cl fun c2 => forL ts fun t =>
     block 0 [[(vSel p c, false), (vSel p c2, true), (vGrid p t c2, false), (vGrid p t c, true)]]
 
@@ -108,7 +138,7 @@ def counterM (cv : ℕ → ℕ → ℕ) (B : ℕ) : ℕ → List (List Lit) → 
     tick
     let js ← rangeM (B + 1)
     let x ← forL js fun j =>
-      block 8 [[(cv i j, false), (cv (i + 1) j, true)],
+      block 16 [[(cv i j, false), (cv (i + 1) j, true)],
         if j = 0 then negLits it ++ [(cv (i + 1) 0, true)]
         else negLits it ++ [(cv i (j - 1), false), (cv (i + 1) j, true)]]
     let r ← counterM cv B (i + 1) rest

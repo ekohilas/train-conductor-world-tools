@@ -39,7 +39,7 @@ theorem hon_counterM (cv : ℕ → ℕ → ℕ) (B : ℕ) :
   | cons it rest ih =>
     intro i
     have h1 : Hon (forL (List.range (B + 1)) fun j =>
-        block 8 [[(cv i j, false), (cv (i + 1) j, true)],
+        block 16 [[(cv i j, false), (cv (i + 1) j, true)],
           if j = 0 then negLits it ++ [(cv (i + 1) 0, true)]
           else negLits it ++ [(cv i (j - 1), false), (cv (i + 1) j, true)]]) :=
       hon_forL _ _ fun j _ => hon_block _ _
@@ -62,8 +62,8 @@ theorem hon_finM (I : Instance) (cl : List Cell) (p : Cell) : Hon (finM I cl p) 
   hon_forL _ _ fun _ _ => hon_block _ _
 
 theorem hon_nearM (I : Instance) (cl : List Cell) (p : Cell) : Hon (nearM I cl p) :=
-  hon_bind _ _ (hon_forL _ _ fun _ _ => hon_forL _ _ fun _ _ => hon_forL _ _ fun _ _ =>
-    hon_block _ _)
+  hon_bind _ _ (hon_bind _ _ (hon_forL _ _ fun _ _ => hon_forL _ _ fun _ _ =>
+    hon_forL _ _ fun _ _ => hon_block _ _))
 
 theorem hon_cardM (I : Instance) (cl : List Cell) (p : Cell) : Hon (cardM I cl p) :=
   hon_bind _ _ (hon_bind _ _ (hon_bind _ _
@@ -142,9 +142,9 @@ theorem finM_time (cl : List Cell) (p : Cell) (hcl : cl.length ≤ n)
 theorem nearM_time (cl : List Cell) (p : Cell) (hcl : cl.length ≤ n)
     (hclB : ∀ c ∈ cl, CellB M c) (hp : CellB M p)
     (hT : I.W * I.H + 1 ≤ n) (hTM : I.W * I.H ≤ M) :
-    (nearM I cl p).time ≤ (n + 1) + 4 * n * (4 * n * (4 * n * Q M)) := by
+    (nearM I cl p).time ≤ 2 + ((n + 1) + 4 * n * (4 * n * (4 * n * Q M))) := by
   simp only [nearM, rangeM, bind_time, ret_time, ret_val]
-  refine Nat.add_le_add (by omega) (forL_time_le' cl _ n _ hcl hn
+  refine Nat.add_le_add le_rfl (Nat.add_le_add (by omega) (forL_time_le' cl _ n _ hcl hn
     (pos4 hn (pos4 hn (Q_pos M)))
     (fun c hc => forL_time_le' cl _ n _ hcl hn (pos4 hn (Q_pos M))
       (fun c2 hc2 => forL_time_le' _ _ n (Q M) (by simp; omega) hn (Q_pos M)
@@ -152,7 +152,7 @@ theorem nearM_time (cl : List Cell) (p : Cell) (hcl : cl.length ≤ n)
           (by rw [List.mem_range] at ht; omega))
         (fun _ _ => good_block _ _))
       (fun _ _ => hon_good (hon_forL _ _ fun _ _ => hon_block _ _)))
-    (fun _ _ => hon_good (hon_forL _ _ fun _ _ => hon_forL _ _ fun _ _ => hon_block _ _)))
+    (fun _ _ => hon_good (hon_forL _ _ fun _ _ => hon_forL _ _ fun _ _ => hon_block _ _))))
 
 omit hM in
 theorem counterM_time (cv : ℕ → ℕ → ℕ) (B : ℕ) (hB : B + 1 ≤ n) :
@@ -169,7 +169,7 @@ theorem counterM_time (cv : ℕ → ℕ → ℕ) (B : ℕ) (hB : B + 1 ≤ n) :
   | cons it rest ih =>
     intro i hit hcv
     have hx := forL_time_le' (List.range (B + 1)) (fun j =>
-        block 8 [[(cv i j, false), (cv (i + 1) j, true)],
+        block 16 [[(cv i j, false), (cv (i + 1) j, true)],
           if j = 0 then negLits it ++ [(cv (i + 1) 0, true)]
           else negLits it ++ [(cv i (j - 1), false), (cv (i + 1) j, true)]]) n (Q M)
       (by simpa using hB) hn (Q_pos M)
@@ -178,7 +178,7 @@ theorem counterM_time (cv : ℕ → ℕ → ℕ) (B : ℕ) (hB : B + 1 ≤ n) :
           (by rw [List.mem_range] at hj; omega)))
       (fun _ _ => good_block _ _)
     have hxl := forL_len_le_time (List.range (B + 1)) (fun j =>
-        block 8 [[(cv i j, false), (cv (i + 1) j, true)],
+        block 16 [[(cv i j, false), (cv (i + 1) j, true)],
           if j = 0 then negLits it ++ [(cv (i + 1) 0, true)]
           else negLits it ++ [(cv i (j - 1), false), (cv (i + 1) j, true)]])
       (fun _ _ => good_block _ _)
@@ -222,7 +222,7 @@ def bCard (n q : ℕ) : ℕ := 4 * n * 32 + (4 * n * 32 + ((n + 2) + (2 * bCnt n
 
 def bPort (n q : ℕ) : ℕ :=
   2 * (4 * n * q) + (2 * (n + 4 * n * (4 * n * q)) + (2 * (4 * n * q) +
-    (2 * ((n + 1) + 4 * n * (4 * n * (4 * n * q))) + bCard n q)))
+    (2 * (2 + ((n + 1) + 4 * n * (4 * n * (4 * n * q)))) + bCard n q)))
 
 theorem cardM_time (cl : List Cell) (p : Cell) (hcl : cl.length + 1 ≤ n)
     (hclB : ∀ c ∈ cl, CellB M c) (hp : CellB M p) (hk : I.k + 1 ≤ n) (hnM : n ≤ M) :
@@ -347,8 +347,8 @@ theorem cellsM_time (hW : I.W ≤ n) (hH : I.H ≤ n) :
 
 omit hM in
 theorem filterM_time (l : List Cell) (s : Finset Cell) (hl : l.length ≤ n) :
-    (filterM l s).time ≤ 4 * n * 1 :=
-  forL_time_le' l _ n 1 hl hn le_rfl (fun _ _ => by simp)
+    (filterM l s).time ≤ 4 * n * 2 :=
+  forL_time_le' l _ n 2 hl hn (by norm_num) (fun _ _ => by simp)
     (fun c _ => by simp only [ret_val, ret_time]; split_ifs <;> simp)
 
 end time
@@ -365,7 +365,7 @@ theorem cells_length (I : Instance) : (cells I).length = I.W * I.H := by
 
 /-- The raw sum of the bounds of all parts of `toKgen`. -/
 def bRaw (n q : ℕ) : ℕ :=
-  (2 * n + 2 + 4 * n * (4 * n * 1)) + 2 * (4 * n * 1) + 4 * (4 * n * q) +
+  (2 * n + 2 + 4 * n * (4 * n * 1)) + 2 * (4 * n * 2) + 4 * (4 * n * q) +
     3 * (4 * n * bPort n q) + (n + 4 * n * (4 * n * (4 * n * 96))) +
     2 * (n * (n * (n * 1)) * (11 * n * q) + q) + 4 * n * 32 + (n * (11 * n * q) + q)
 
