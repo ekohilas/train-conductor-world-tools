@@ -436,7 +436,7 @@ formalised.
 
 ## 7. Experiments
 
-All of this is in the pytest suite (`python -m pytest -q`, 587 tests, about 2 minutes).
+All of this is in the pytest suite (`python -m pytest -q`, 589 tests, about 2 minutes).
 
 **Train → SAT** (`tests/test_sat_reduction.py`). 210 random instances from
 `network_solver.generate.random_instance`: grids from 2 × 2 to 6 × 5, 1–3 ports, 1–5
@@ -475,10 +475,13 @@ container of this session:
 | | Time | Output |
 |---|---|---|
 | `to_sat` (CPython, clauses generated and counted, not stored) | 550 s | 432,120,212 clauses, 1,076,093,685 literals |
-| CP-SAT, `python -m network_solver solve --time-limit 1500 --workers 4` (optimisation) | more than 1300 s; the run had not finished when this line was written | — |
+| CP-SAT, `python -m network_solver solve --time-limit 1500 --workers 4` (optimisation) | 1500 s, the time limit | a verified solution with excess 2 and 210 tiles; optimality **not** proved (status `FEASIBLE`, tile lower bound 104) |
 
-The formula was not given to a SAT solver. The reduction is a proof of membership in NP,
-not a practical algorithm: its time-expanded distance variables cost `Θ(|P|·N²)` clauses.
+Both runs shared the machine with other jobs, so the times are approximate. The formula
+was not given to a SAT solver. The reduction is a proof of membership in NP, not a
+practical algorithm: its time-expanded distance variables cost `Θ(|P|·N²)` clauses. The
+two rows are not the same task either: `to_sat` only writes the formula for one query,
+CP-SAT searches for an optimum.
 
 ## 8. What blocked the backward direction, and what would finish the goal
 
