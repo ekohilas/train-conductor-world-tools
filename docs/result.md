@@ -444,6 +444,11 @@ All runs on one 4-core machine, Python 3.13, OR-tools 9.15.
   CP-SAT agree on all of them.
 - `lean/TrainNetwork/Brute/CrossCheck.lean`: 24 tiny instances on which the Lean
   solver, run inside Lean, agrees with the Python solvers (checked at build time).
+- `python scripts/stress_exact.py` (not part of the test-suite, about two minutes):
+  2451 further random instances, sizes up to 9×9, up to 4 ports and 7 cities. 85 are
+  infeasible, 292 have positive optimal excess and 757 have a real tie choice. `exact`
+  and CP-SAT agree on all of them. One more instance was skipped because `exact`
+  exceeded its 20 s limit.
 
 **Scaling of `exact`.** On 15 random instances of size 10×10 and 12×12 with 4 ports, 8
 cities and `k = 4` (16 pairs), 12 finished within 30 s (0.01 s to 11 s) and 3 did not.
