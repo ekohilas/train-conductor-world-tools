@@ -21,7 +21,7 @@ What this repository does contain:
 | T1 | With `m` chosen pairs, some optimal network has at most `m(m−1)` T-junction tiles, and the problem reduces to `N^{O(m²)}` instances of a routing problem **R** with `O(m²)` paths. | Paper proof (§3) |
 | C2 | For bounded terminals, *feasibility* is decidable in polynomial time. This uses the Robertson–Seymour disjoint-paths theorem as a black box. | Paper proof (§3), not formalised |
 | C3 | With `c` crossroads (free cells with four open neighbours) the *optimum* is computable in time `4^c · N^{O(m²)}`: polynomial for bounded terminals when `c = O(log N)`. | Paper proof (§3), not formalised |
-| T4 | The search algorithm of `network_solver/exact.py` is exact. Its worst case is exponential. | Paper proof (§6), tested against CP-SAT on 296 random instances |
+| T4 | The search algorithm of `network_solver/exact.py` is exact. Its worst case is exponential. On `europe.json` it proves the optimal excess (2) in 2.5 s but does not finish the tile count in an hour. | Paper proof (§6), tested against CP-SAT on 296 + 2451 random instances |
 
 The second frozen theorem, `goal_polytime`, is open in every form: we have no
 polynomial bound for any exact algorithm, in Lean or on paper.
@@ -488,19 +488,30 @@ exponential behaviour one expects from step 3.
 **`data/instances/europe.json`** (49×55, 1546 open cells, 2933 grid edges, 1333
 crossroads, 54 chosen pairs).
 
-The optimal excess is 2: `exact` proves this. The optimal tile count at excess 2 is
-**not known to us**. The best network we have has 210 tiles (found by CP-SAT, and equal
-to the stored `data/instances/europe.solution.json`), but in our run CP-SAT did not
-prove that 210 is optimal: its lower bound after 50 minutes was 104.
+Neither solver solved Europe to proven optimality within its time limit. What is
+established: the optimal excess is 2 (proved independently by `exact` and by CP-SAT),
+and there is a network with excess 2 and 210 tiles (found by CP-SAT, and equal in cost
+to the stored `data/instances/europe.solution.json`). Whether 210 tiles is optimal is
+**not known to us**: CP-SAT's lower bound after 50 minutes was 104.
+
+| Solver | Excess (first objective) | Tiles (second objective) | Wall time |
+|---|---|---|---|
+| CP-SAT, `python -m network_solver solve --time-limit 3000 --workers 4` | 2 | 210 found, **not proven optimal** (lower bound 104) | 3000 s, stopped at the limit |
+| `exact`, `python -m network_solver exact --time-limit 3600` (one thread) | 2, proved optimal after 2.5 s | 261 found, **not proven optimal** | 3600 s, stopped at the limit |
+| `brute` / Lean `bruteSolve` | — | — | not run: `2^2933` networks |
+
+The first objective alone, measured again on an idle machine:
 
 | Solver | Result | Wall time |
 |---|---|---|
-| CP-SAT (`python -m network_solver solve --time-limit 3000`, 4 workers) | stopped at the time limit: excess 2, 210 tiles, **not proven optimal** (tile lower bound 104) | 3000 s |
-| `exact` (`python -m network_solver exact --time-limit 3600`) | TBD-EXACT | TBD-EXACT |
-| `brute` / Lean `bruteSolve` | not run: `2^2933` networks | — |
+| `exact`, steps 0–2 | excess 2, proved optimal (80 search nodes) | 2.2 s to 2.4 s (three runs) |
+| CP-SAT, phase 1 only (minimise excess, 4 workers) | excess 2, proved optimal | 47 s, plus 1 s to build the model |
 
-The machine was running other jobs during the CP-SAT run, so its time is indicative
-only.
+The two long runs shared the machine with other jobs (Lean builds and tests during the
+CP-SAT run), so their times are indicative only. On Europe step 3 of `exact` made no
+progress in an hour: it ended with the 261-tile network that the local search had
+produced in the first seconds. The tile objective at fixed excess is where both
+solvers spend their time.
 
 ## 8. Differences between the Lean proof and the paper proof
 
