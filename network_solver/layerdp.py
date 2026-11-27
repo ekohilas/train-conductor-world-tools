@@ -41,105 +41,114 @@ constraint is used. Only tiny inputs finish.
 ``mode="pruned"`` (default): the same optimisation restricted to *canonical*
 certificates, processed one cell at a time (broken-profile DP; if H > W the instance is
 transposed first so that a layer always has min(W, H) cells). Predecessor directions
-are resolved lazily: a frontier cell carries, per port, a "predecessor still needed"
-flag instead of a direction. The canonical certificate of an optimal solution (network
-= union of one network-shortest path per chosen pair; port j labels exactly the cells
-of its chosen paths with their exact network distance) satisfies all of the following,
-so none of them changes the optimum:
+are not enumerated: a frontier cell carries, per port, a "parent still needed" and a
+"child still needed" flag.
+
+The canonical certificate. Let N be the network of an optimal solution. For every port
+j take the BFS tree of N from port j (walks with free interior) in which the parent of
+a cell v is the first of its neighbours, in the fixed order L, U, D, R, that is joined
+to v in N, is transit_j and has distance dist(v) - 1. Port j's chosen paths are the
+tree paths to its chosen cities; their union S_j is a tree rooted at port j whose
+leaves are exactly the chosen cities of j. The network N' is the union of the S_j (a
+sub-network of N with the same pair distances, hence also optimal) and port j labels
+exactly the cells of S_j with their exact network distance. Each chosen path is a
+network-shortest path, so this is a special case of "network = union of one
+network-shortest path per chosen pair, labelled with exact distances". In N', the
+parent of v in S_j is still the first neighbour (order L, U, D, R) that is joined to v,
+transit_j and labelled d_j(v) - 1: those neighbours are a subset of the candidates in
+N and contain the tree parent. Call that neighbour the *parent* of v for j. It is a
+function of labels and edge bits and exists for every labelled non-source cell of any
+certificate (U3/B2/B3).
+
+The canonical certificate satisfies all of the following rules, so none of them changes
+the optimum, and every assignment the DP accepts is a certificate of the system above.
 
   (P1) corridor of budget X: an entry d for port j at x needs
        g_j(x) <= d <= max over chosen cities c of (g(j, c) + X - h(x, c)); for a city
-       cell only its own bound g(j, c) + X is used (its label is the length of its own
+       cell only its own bound g(j, x) + X is used (its label is the length of its own
        path). X runs through 0, 2, 4, 8, 16, ...; a run whose optimum has excess <= X
-       is globally optimal; the run with X >= W*H is final (its corridor contains the
-       canonical certificate of every feasible solution), so "no certificate" there
+       is globally optimal; the run with X >= W*H is final: its corridor contains the
+       canonical certificate of every feasible solution, so "no certificate" there
        means infeasible.
   (P2) Lipschitz: on a network edge x-y with both cells labelled for j and x
        transit_j: d_j(y) <= d_j(x) + 1.
-  (P3) successor: a free cell labelled d for j has a network neighbour labelled d+1.
+  (P3) successor, in the sharper form (P3t): a free cell labelled for j is the parent,
+       for j, of one of its network neighbours (which is then labelled d + 1). True
+       because a free cell of S_j is interior to a tree path, and the next cell of
+       that path has it as parent.
   (P4) a cell with an edge bit has a port entry; a city has an entry for j only if it
-       is chosen for j; a port only for itself; every network edge has a port j for
-       which both endpoints are labelled and the labels differ by exactly 1.
+       is chosen for j; a port only for itself; and, sharper than "every network edge
+       has a port for which both ends are labelled with labels differing by 1", (P4t):
+       every network edge joins some cell to its parent for some port. True because
+       every edge of N' is an edge of some S_j.
   (P5) a free cell with an edge bit has at least 2 edge bits.
 
-Rules added on top of P1-P5 (each with its justification). P3t/P4t/P9 use a sharper
-canonical certificate: for every port j take the BFS tree of the optimal network N from
-port j (walks with free interior) in which the parent of a cell v is the first of its
-neighbours, in the fixed order L, U, D, R, that is joined to v in N, is transit_j and
-has distance dist(v) - 1. Port j's chosen paths are the tree paths to its chosen
-cities; S_j is their union, a tree whose leaves are exactly the chosen cities of j; j
-labels exactly S_j with exact distances and the network is the union N' of the S_j
-(N' is a sub-network of N with the same pair distances, hence also optimal). All of
-P1-P5 hold for it as before. In N' the parent of v in S_j is still the first neighbour
-(order L, U, D, R) joined to v, transit_j and labelled d_j(v) - 1, because those
-neighbours are a subset of the candidates in N that contains the tree parent. Call
-that neighbour the *parent* of v for j; it is a function of labels and edge bits, and
-it exists for every labelled non-source cell of any certificate (U3/B2/B3).
-
-  (P3t) (sharpens P3) a free cell labelled for j is the parent, for j, of one of its
-        network neighbours. True because a free cell of S_j is interior to a tree path
-        and the next cell of that path has it as parent.
-  (P4t) (sharpens the last part of P4) every network edge joins some cell to its
-        parent for some port. True because every edge of N' is an edge of some S_j.
-  (P9)  leaf count: after every cell, for every port j,
-        (number of pending child obligations of port j)
-          <= #{chosen cities of j not processed yet}
-             + #{frontier cells labelled for j whose parent is not processed yet},
-        where a frontier cell x contributes to the left-hand side the larger of
-        [x still needs a child for j (P3t)] and the number of its edges to unprocessed
-        cells z for which "z gets x as parent for j" is the only way left (given the
-        label domains of z and which parents x still lacks) to satisfy P4t.
-        Justification: every counted obligation is a distinct edge x-z of the tree S_j
-        from a processed parent x to an unprocessed child z. Follow a tree path from z
-        down to a leaf and stop at the first processed cell (its parent is unprocessed,
-        so it is counted on the right) or, if there is none, at the leaf (an
-        unprocessed chosen city). The map is injective: if x-z and x'-z' had the same
-        image w, then z and z' are both ancestors-or-equal of w; z = z' gives x = x',
-        and if z is strictly above z' then x' is a processed cell on the unique tree
-        path from z to w before w, contradicting the choice of w.
-  (P10) root count (mirror image of P9): after every cell, for every port j,
-        #{frontier cells labelled for j whose parent is not processed yet}
-          <= #{chosen cities of j already processed}
-             + (number of pending child obligations of port j, as in P9).
-        Justification: from a cell x of the left-hand side walk down the tree S_j
-        through processed children for as long as there is one. The walk ends at a
-        processed chosen city of j or at a free cell without processed child, which
-        still needs a child and so contributes at least 1 to the obligations. The end
-        cell determines x (x is its first ancestor-or-self whose parent is not
-        processed), so the map is injective.
+Rules added on top of P1-P5 (P3t and P4t above are also additions), each with its
+justification:
 
   (P6) excess cap: in a non-final run of budget X, partial certificates whose
        accumulated excess exceeds X are dropped. Excess terms are non-negative, so a
        certificate of total excess <= X never has a partial sum above X; a non-final
-       run is only accepted when its optimum has excess <= X, and the optimal canonical
-       certificate (excess E* <= that) survives the cap. The final run has no cap.
+       run is only accepted when its optimum has excess <= X, and then the optimal
+       canonical certificate (excess E* <= that) survives the cap. The final run has
+       no cap.
   (P7) incumbent bound: all families are solved at the same budget and the best is
        taken; while solving a family, partial certificates whose cost is already >= the
        best complete certificate of an earlier family are dropped. Costs only grow
        along the DP, so such states cannot improve the minimum over families.
-
   (P8) budget split across ports (generalises P1): for an entry d of port j at x let
        eta_j(x) = min over cities c chosen for j of (d + h(x, c) - g(j, c)) (for a city
        cell: d - g(j, x)); P1 says eta_j(x) <= X. In a non-final run of budget X,
        sum over ports j of max over x in S of eta_j(x) <= X is required for S = a new
        cell together with its processed network neighbours, and for S = the frontier
        (the processed cells that still have an edge to an unprocessed cell) after
-       every cell. Justification: in the canonical certificate x lies on port
-       j's chosen path to some chosen city c_x, whose excess is
+       every cell. Justification: in the canonical certificate x lies on port j's
+       chosen path to some chosen city c_x, whose excess is
        d(x) + (rest of the path) - g(j, c_x) >= d(x) + h(x, c_x) - g(j, c_x)
        >= eta_j(x). Picking for every port the cell with the largest eta gives pairs
        of distinct ports, hence distinct pairs, so the total excess is at least the
        sum; and the total excess of the optimal certificate is <= X whenever the run
        is accepted. The final run does not use P8.
+  (P9) leaf count: after every cell, for every port j,
+         (number of pending child obligations of port j)
+           <= #{chosen cities of j not processed yet}
+              + #{frontier cells labelled for j whose parent is not processed yet},
+       where a frontier cell x contributes to the left-hand side the larger of
+       [x still needs a child for j (P3t)] and the number of its edges to unprocessed
+       cells z for which "z gets x as parent for j" is the only way left (given the
+       label domains of z and which parents x still lacks) to satisfy P4t.
+       Justification: every counted obligation is a distinct edge x-z of the tree S_j
+       from a processed parent x to an unprocessed child z. Follow a tree path from z
+       down to a leaf and stop at the first processed cell (its parent is unprocessed,
+       so it is counted on the right) or, if there is none, at the leaf (an
+       unprocessed chosen city). The map is injective: if x-z and x'-z' had the same
+       image w, then z and z' are both ancestors-or-equal of w; z = z' gives x = x',
+       and if z is strictly above z' then x' is a processed cell on the unique tree
+       path from z to w before w, contradicting the choice of w.
+  (P10) root count (mirror image of P9): after every cell, for every port j,
+         #{frontier cells labelled for j whose parent is not processed yet}
+           <= #{chosen cities of j already processed}
+              + (number of pending child obligations of port j, as in P9).
+       Justification: from a cell x of the left-hand side walk down the tree S_j
+       through processed children for as long as there is one. The walk ends at a
+       processed chosen city of j or at a free cell without processed child, which
+       still needs a child and so contributes at least 1 to the obligations. The end
+       cell determines x (x is its first ancestor-or-self whose parent is not
+       processed), so the map is injective.
 
-Not rules, only consequences of U3/B2/B3 used to shrink label domains up front: labels
-have the parity of g_j(x) (every grid walk from port j to x has that parity), and a cell
-that cannot be labelled by any port can carry no edge (by P4), so it is skipped.
-Dominance is the ordinary one: best cost per frontier state.
+Not rules, only consequences of the above used to drop dead states early: labels have
+the parity of g_j(x) (every grid walk from port j to x has that parity); a cell that no
+port can label carries no edge (P4) and is skipped; an edge to an unprocessed cell is
+only created or kept if the label domains still allow it to become a parent edge (and
+two such edges of one cell need two different ports if both can only lead to parents
+of that cell); a pending parent or child must still be obtainable from an unprocessed
+neighbour. Dominance is the ordinary one: best cost per frontier state.
 
 The families are enumerated inside the budget loop (for each X: all families), which
 gives the same minimum as "for each family: iterative deepening" but never needs the
-final run for an infeasible family when another family is feasible.
+final run for an infeasible family when another family is feasible. The final run is
+by far the most expensive one (labels range over all of 0..W*H and P6/P8 are off), so
+proving infeasibility is slow beyond roughly 20 cells with many pairs.
 """
 from __future__ import annotations
 
@@ -156,7 +165,6 @@ R, D, L, U = 0, 1, 2, 3
 DELTA = ((1, 0), (0, 1), (-1, 0), (0, -1))
 OPP = (L, U, R, D)
 
-_DEBUG_HOOK = None
 _SLOT_BITS = 24
 _SLOT_MASK = (1 << _SLOT_BITS) - 1
 
@@ -974,8 +982,6 @@ def _pruned_run(grid: _Grid, family: dict, reqs: dict, budget: int, final: bool,
         backs.append((t, back))
         ctl.stats["progress"].update(column=t // m, row=row, table=len(table))
         ctl.check(len(table))
-        if _DEBUG_HOOK is not None:
-            _DEBUG_HOOK(t, table, slots, grid)
         if last_active[t // m] == t:
             ctl.log(f"X={budget} column {t // m}/{n - 1}: {len(table)} states, "
                     f"{len(slots)} slots")

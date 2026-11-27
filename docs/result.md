@@ -288,6 +288,7 @@ are the frozen files and are unchanged.
 | `Asymptotics.lean` | `C·N^(a+b·m) ≤ 2^{εN}` for large `N` when `m² ≤ N` | `pow_sqrt_subexp` |
 | `TimeBound.lean` | section 7 | `dpRun_time_le`, **`Answer.solve_time_le`**, **`Answer.subexp`** |
 | `Answer.lean` | imports the above (the file `Goal.lean` refers to) | — |
+| `Examples.lean` | `#guard` tests: `solve` run on five small strips (feasible, infeasible, shared city, adjacent terminals, blocked) | — |
 
 The specification of every `TimeM` program is its `.val`; there are no separate pure
 copies of the algorithms, so what is timed is what is proved correct.
