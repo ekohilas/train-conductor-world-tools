@@ -68,6 +68,23 @@ def ring_instance(n: int) -> Instance:
     return from_ascii(["".join(r) for r in g], k=2)
 
 
+def trident_instance(n: int) -> Instance:
+    """One port, three cities, k = 3, on the same map as `ring_instance(n)`: the port is
+    at the west end, the cities at the north, east and south ends.
+
+    The centre may branch only two ways, so one city is reached through the by-pass.
+    A dynamic programme over walk trees with states (cell, set of cities) would instead
+    walk one step up the north arm and come back through the centre, at excess 2, which
+    no network attains. The optimal excess is 4n + 2.
+    """
+    ring = ring_instance(n)
+    (north,) = [c for name, c in ring.ports.items() if name == "P2"]
+    cities = dict(ring.cities)
+    cities["Cc"] = north
+    return Instance(width=ring.width, height=ring.height, blocked=ring.blocked,
+                    ports={"P1": ring.ports["P1"]}, cities=cities, k=3)
+
+
 def snake_instance(n: int) -> Instance:
     """One port, one city, k = 1, at the two ends of a boustrophedon corridor that
     fills a (2n+1) x (2n+1) grid. The unique network uses Theta(W * H) track tiles."""

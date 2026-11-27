@@ -11,7 +11,8 @@ import pytest
 
 from network_solver import cpsat, exact, verify
 from network_solver.distances import requirements
-from network_solver.families import plus_instance, ring_instance, snake_instance
+from network_solver.families import (plus_instance, ring_instance, snake_instance,
+                                      trident_instance)
 from network_solver.generate import random_instance
 
 # (width, height, ports, cities, k)
@@ -68,6 +69,15 @@ def _agree(inst):
     assert got == want, (got, want, inst.to_json())
     if sol is not None:
         assert (stats["excess"], stats["tiles"]) == got
+        # Lemma B of docs/result.md: the network returned is the union of a canonical
+        # path system, so it has at most m(m-1) T-junctions, m = number of pairs.
+        m = len(inst.ports) * inst.k
+        degree = {}
+        for edge in sol.edges:
+            for cell in edge:
+                degree[cell] = degree.get(cell, 0) + 1
+        junctions = sum(1 for cell, dg in degree.items() if dg == 3 and inst.is_free(cell))
+        assert junctions <= m * (m - 1)
     return got
 
 
@@ -103,6 +113,13 @@ def test_ring_needs_long_detour(n):
     # 4 terminals, and the optimal excess grows linearly with the side of the grid.
     excess, _ = _agree(ring_instance(n))
     assert excess == 6 * n + 6
+
+
+@pytest.mark.parametrize("n", [3, 4, 6, 8])
+def test_trident_single_port_needs_long_detour(n):
+    # One port and three cities: the centre cannot branch three ways.
+    excess, _ = _agree(trident_instance(n))
+    assert excess == 4 * n + 2
 
 
 @pytest.mark.parametrize("n", [1, 2, 3])
