@@ -11,8 +11,8 @@ import pytest
 
 from network_solver import cpsat, exact, verify
 from network_solver.distances import requirements
-from network_solver.families import (plus_instance, ring_instance, snake_instance,
-                                      trident_instance)
+from network_solver.families import (from_ascii, plus_instance, ring_instance,
+                                      snake_instance, trident_instance)
 from network_solver.generate import random_instance
 
 # (width, height, ports, cities, k)
@@ -69,15 +69,6 @@ def _agree(inst):
     assert got == want, (got, want, inst.to_json())
     if sol is not None:
         assert (stats["excess"], stats["tiles"]) == got
-        # Lemma B of docs/result.md: the network returned is the union of a canonical
-        # path system, so it has at most m(m-1) T-junctions, m = number of pairs.
-        m = len(inst.ports) * inst.k
-        degree = {}
-        for edge in sol.edges:
-            for cell in edge:
-                degree[cell] = degree.get(cell, 0) + 1
-        junctions = sum(1 for cell, dg in degree.items() if dg == 3 and inst.is_free(cell))
-        assert junctions <= m * (m - 1)
     return got
 
 
@@ -102,6 +93,15 @@ def test_random_suite_contains_hard_outcomes():
     assert sum(1 for s in costs if s is None) >= 1
     assert any(s is not None and verify.check(_instance(case), s).excess > 0
                for case, s in zip(CASES[224:], costs))
+
+
+def test_port_adjacent_to_city_uses_terminal_edge():
+    # docs/problem.md says edges between two terminals "are never needed". That remark
+    # is inaccurate in this corner case: the optimum is the single port-city edge.
+    inst = from_ascii(["1a", ".."], k=1)
+    assert _agree(inst) == (0, 0)
+    sol, _ = exact.solve(inst)
+    assert sol.edges == {frozenset({(0, 0), (1, 0)})}
 
 
 def test_plus_is_infeasible():

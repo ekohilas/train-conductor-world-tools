@@ -38,6 +38,8 @@ def instances():
     out = [("plus", plus_instance()),
            ("crossing", from_ascii(["#1#", "2.a", "#b#"], k=2)),
            ("tie", from_ascii(["a.1.b"], k=1)),
+           # a port next to its city: the optimal network is the single terminal-terminal edge
+           ("adjacent", from_ascii(["1a", ".."], k=1)),
            ("detour", from_ascii(["1.a", "#.#", "2.b"], k=2)),
            # the centre cannot serve all four directions: both ports reach `a` the long way
            ("excess", from_ascii(["#2#", "1.a", "#..", "#b."], k=2))]

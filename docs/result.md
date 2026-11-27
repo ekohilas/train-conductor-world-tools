@@ -59,9 +59,6 @@ is a nearest choice (`IsNearestChoice`). The pairs `(p, c)` with `c ∈ S_p` are
 degree rule iff it misses at least one of the four grid edges at every crossroads; no
 other cell can violate the rule.
 
-The grid is bipartite, so all walks between two given cells have the same parity. Every
-pair's excess is therefore even.
-
 **Path systems.** A *path system* for a selection `S` is a family `𝒲 = (W_pc)` of
 simple valid paths, one from `p` to `c` for every chosen pair. Its *union* `U(𝒲)` is
 the set of edges used. It is *admissible* if `U(𝒲)` has at most 3 edges at every free
@@ -89,18 +86,23 @@ for any two of its paths, the set of cells they share is the vertex set of a sin
 common sub-path of both (possibly empty, or a single terminal). The union of a
 canonical admissible system has at most `m(m − 1)` free cells of degree 3.
 
-*Proof.* Give the edges of `N` distinct weights `1 + ε_e` with `ε_e > 0` so small and
-generic that different edge sets have different total weights and that a shorter walk
-is always lighter. Let `W_pc` be the lightest valid walk from `p` to `c` in `N`; it is
-a shortest one, and it is unique.
+*Proof.* Give every edge `e` of `N` a weight `1 + ε_e`, where the `ε_e > 0` are generic
+(different edge sets have different total weights) and `Σ_e ε_e < 1`. The weight of a
+walk is the sum of the weights of the edges it traverses, counted with repetition. A
+shortest valid walk from `p` to `c` in `N`, of length `L`, is a simple path and weighs
+less than `L + 1`, while every walk with more than `L` edges weighs more than `L + 1`.
+So a lightest valid walk from `p` to `c` is a simple path of length `L`, and it is
+unique because simple paths with the same ends and the same weight have the same edge
+set. Let `W_pc` be this walk.
 Take two of these paths `W` and `W'` with a common cell. Let `u` and `v` be the first
 and the last cell of `W` that lie on `W'`. Write `W[u, v]` and `W'[u, v]` for the
 sub-paths between `u` and `v`. Their interior cells are interior cells of `W`,
 respectively `W'`, hence free. So replacing `W[u, v]` by `W'[u, v]` inside `W` gives a
 valid walk from `p` to `c`: its interior consists of interior cells of `W`, of `u` and
-`v` if they are interior to `W`, and of interior cells of `W'[u, v]`, all free. By
-minimality of `W`, `W[u, v]` is not heavier than `W'[u, v]`. The symmetric argument
-gives the converse, so the two have the same weight, hence the same edge set. So
+`v` if they are interior to `W`, and of interior cells of `W'[u, v]`, all free. Since
+`W` is lightest among all valid walks, simple or not, `W[u, v]` is not heavier than
+`W'[u, v]`. The symmetric argument, with `W'` in place of `W`, gives the converse, so
+the two sub-paths have the same weight, hence the same edge set. So
 `W[u, v] = W'[u, v]`, and by the choice of `u` and `v` every common cell lies on it.
 For the count, let `x` be a free cell with exactly three edges `a, b, c` of `U`. A free
 cell is interior to every path through it, so each such path uses two of the three
@@ -164,10 +166,10 @@ The number of skeletons is at most `2^{400} · (N + 1)^{m(m−1)} · g(m)` for a
 instances of the following problem with a *bounded number of paths*:
 
 > **Routing problem R.** Given the grid with its blocked cells, `L = O(m²)` pairs of
-> cells `(a_f, b_f)` (endpoints may coincide between pairs) and positive integer
-> weights `w_f ≤ m`: find pairwise internally disjoint paths `Q_f` from `a_f` to `b_f`
-> through free cells, minimising `(Σ w_f |Q_f|, Σ |Q_f|)` lexicographically, or report
-> that none exist.
+> cells `(a_f, b_f)` (endpoints may coincide between pairs) and integer weights
+> `0 ≤ w_f ≤ m`: find pairwise internally disjoint paths `Q_f` from `a_f` to `b_f`
+> whose interior cells are free and are not an endpoint of any pair, minimising
+> `(Σ w_f |Q_f|, Σ |Q_f|)` lexicographically, or report that none exist.
 
 ### Corollary 2 (feasibility is polynomial, on paper)
 
@@ -176,11 +178,14 @@ in time polynomial in `N`.
 
 *Proof.* By Theorem 1 it suffices to decide, for each of the `N^{O(m²)}` skeletons,
 whether a realisation exists. Guess, for every edge `f` of `K`, whether `Q_f` is a
-single grid edge, has one interior cell, or else its first and last interior cells
-(`O(N²)` choices per edge, in fact at most 16). What remains is to find vertex-disjoint
-paths between `L` prescribed pairs of distinct cells in the graph of free cells outside
-`J`. This is the disjoint paths problem with a fixed number of pairs, which is solvable
-in `O(n³)` time (Robertson and Seymour, *Graph Minors XIII*, 1995). ∎
+single grid edge, or has exactly one interior cell (which one), or else its first and
+last interior cells. These are neighbours of `a_f` and `b_f`, so there is a bounded
+number of guesses per edge. Reject the guess unless all guessed cells are distinct free
+cells outside `J`. Delete the guessed single interior cells. What remains is to find
+vertex-disjoint paths between at most `L` prescribed pairs of distinct cells in the
+graph of the remaining free cells outside `J`. This is the disjoint paths problem with
+a fixed number of pairs, which is solvable in `O(n³)` time (Robertson and Seymour,
+*Graph Minors XIII*, 1995). ∎
 
 This corollary is **not** formalised. Formalising it would require a verified
 fixed-parameter disjoint-paths algorithm. We know of no elementary polynomial algorithm
@@ -204,9 +209,12 @@ for all chosen pairs, the union of *arbitrary* shortest valid paths `Q_f` is a f
 network of excess 0 with at most `|J| + Σ_f (d(a_f, b_f) − 1)` tiles; disjointness is
 not needed. So the optimum is `(0, min |J| + Σ_f (d(a_f, b_f) − 1))` over these
 skeletons, and all the distances involved come from `N` breadth-first searches.
-For general `c`, a set `D` that contains exactly one grid edge at every crossroads is
-called a *complete orientation*; there are at most `4^c`. Every network obeys the
-degree rule iff it lies in `G − D` for some complete orientation `D` (§2). For a fixed
+For general `c`, choose one grid edge `e_x` at every crossroads `x` and let
+`D = {e_x : x a crossroads}`. Call such a set a *complete orientation*; there are at
+most `4^c`. (Two neighbouring crossroads may choose the same edge, and then `D` may
+contain two edges at a third crossroads; this is allowed.) A network obeys the degree
+rule iff it lies in `G − D` for some complete orientation `D`: it misses some edge at
+every crossroads, and these edges can serve as the `e_x`. For a fixed
 `D` repeat the argument above inside `G − D`, with the valid-walk distance `d_D` of
 `G − D` in place of `d` for the segments and for the walks, but with the original `d`
 in the definition of the selections and of the excess: the least excess of a network
@@ -243,9 +251,9 @@ All three families are in `network_solver/families.py` and are checked by
 
 The natural argument is: "there are `O(m²)` junctions; guess them; join them by
 shortest paths". Theorem 1 makes the first two steps correct. The third is wrong.
-In `ring_instance(n)` the optimal network joins a junction on the north arm to a
-junction on the south arm by the by-pass, of length about `4n`. The shortest valid path
-between these two cells runs through the centre and has length about `2n`. Using it
+In `ring_instance(n)` an optimal network joins a junction on the north arm to the
+south city by the by-pass, a segment of length `4n + 3`. The shortest valid path
+between these two cells runs through the centre and has length `2n − 1`. Using it
 gives the centre four edges. A segment of an optimal network is a shortest path only in
 the grid minus the other segments, and the other segments are `Θ(N)` cells that are not
 known in advance.
@@ -291,7 +299,11 @@ be precise about what this does and does not show:
   of pairs on one edge at no cost, so two paths can never be forced to be disjoint;
   only the union matters. The Train problem might be easier than R.
 - It does **not** show NP-hardness. The standard two-path gadget reductions fail for
-  the same reason, and the excess-0 case is very likely polynomial.
+  the same reason. Moreover the question "is excess 0 attainable, and with how few
+  tiles?" is very likely polynomial for bounded terminals: at excess 0 every segment
+  of a skeleton is a shortest path, so realisability becomes a disjoint *shortest*
+  paths problem with a fixed number of pairs, which is polynomial (Lochet). We have
+  not checked this reduction in detail and do not claim it.
 - It does show that every proof strategy we could think of ends in a shortest-disjoint-
   paths question on a planar graph with holes, where homotopy classes with respect to
   the holes cannot be enumerated and no exchange argument is available.
@@ -339,10 +351,10 @@ candidates, and returns one of minimum cost. Supporting results, all proved:
 - `Partial.feasible_iff`: a feasible solution exists iff the solver returns `some`.
 
 `Brute/CrossCheck.lean` is a test, not a proof. It is generated by
-`scripts/lean_crosscheck.py` and contains 24 tiny instances. For each, a `#guard` runs
+`scripts/lean_crosscheck.py` and contains 25 tiny instances. For each, a `#guard` runs
 the verified solver in Lean and compares its `(excess, tiles)` with the optimum found
-by the three Python solvers. All 24 agree, including two infeasible instances and one
-with optimal excess 4. This ties the Lean reading of `docs/problem.md` to the Python
+by the three Python solvers. All 25 agree, including two infeasible instances, one
+with optimal excess 4, and one where a port is adjacent to its city. This ties the Lean reading of `docs/problem.md` to the Python
 one that all other experiments use.
 
 `bruteSolve` is a plain function. It is **not** written in `TimeM`, it charges no
@@ -378,8 +390,9 @@ nearest in `G − D`), so `LB(D)` is the excess of `T_D`.
 2. *Optimal excess.* Best-first branch and bound over the same sets. Keep a priority
    queue of sets `D` ordered by `LB(D)`, initially `{∅}`. Remove a set `D` of least
    `LB(D)`. If `T_D` obeys the degree rule, stop: `X* = LB(D)` and `T_D` attains it.
-   Otherwise pick a crossroads `x` where `T_D` uses four edges and insert the four sets
-   `D ∪ {e}`, `e` an edge at `x`, whose trees exist.
+   Otherwise pick a crossroads `x` where `T_D` uses four edges and insert those of the
+   four sets `D ∪ {e}`, `e` an edge at `x`, whose trees exist and which were never
+   inserted before.
 3. *Optimal tile count at excess `X*`.* For every selection `S`, enumerate by
    depth-first search the path systems for `S`, one pair after the other in a fixed
    order, extending the current path cell by cell. A partial system is abandoned when
@@ -389,7 +402,8 @@ nearest in `G − D`), so `LB(D)` is the excess of `T_D`.
    (iii) the current path meets an earlier path in a cell after having left that path,
    or moves between two cells of an earlier path along an edge that path does not use;
    (iv) the number of free cells used reaches the tile count of the incumbent.
-   The first incumbent is `T_D` from step 2. Return the best network found.
+   The first incumbent is the network of step 2, after the local search described
+   below. Return the best network found.
 
 Two heuristics do not affect correctness: in step 2 the crossroads `x` is chosen by
 looking one level ahead, and before step 3 a local search re-routes single pairs of
@@ -401,11 +415,18 @@ otherwise an optimal solution.
 *Proof.* Step 1 is complete and sound by Lemma C.
 Step 2. Let `(N, S)` be feasible with `N ⊆ G − D`. Then `dist_N(p, c) ≥ d_D(p, c)` for
 every chosen pair, so the excess of `(N, S)` is at least `LB(D)`. Fix an optimal
-`(N*, S*)`. At every moment `N*` lies in `G − D'` for some `D'` in the queue: this
-holds at the start, and by Lemma C it is preserved when a set whose trees violate the
-degree rule is replaced by its children. (A child without trees contains no feasible
-network. A child that was inserted earlier is not inserted again, but by induction it
-already has a superset in the queue whose subgraph contains `N*`.) When the algorithm stops at `D`, we get
+`(N*, S*)`. We claim that at every moment the following holds: *for every set `D` that
+was ever inserted and has `N* ⊆ G − D`, the queue contains a set `D'' ⊇ D` with
+`N* ⊆ G − D''`.* It holds at the start. Suppose a set `D0` is removed and the algorithm
+does not stop. A set `D` whose witness `D''` is not `D0` keeps its witness. If the
+witness was `D0`, Lemma C gives an edge `e` at `x` with `N* ⊆ G − (D0 ∪ {e})`; the
+trees of `D0 ∪ {e}` exist because it contains a feasible network, and `D0 ∪ {e}` is a
+strict superset of `D0` because `T_{D0}` uses `e`. Either `D0 ∪ {e}` is inserted now
+and is the new witness, or it was inserted earlier, and then by the claim it has a
+witness in the queue, which is a strict superset of `D0` and therefore is not the set
+just removed. Applied to `D = ∅` the claim says that, as long as the algorithm has not
+stopped, some `D'` in the queue has `N* ⊆ G − D'`, and in particular the queue is not
+empty. When the algorithm stops at `D`, we get
 `LB(D) ≤ LB(D') ≤ excess(N*, S*) = X*`, and `T_D` is a feasible network of excess
 `LB(D)`. So `LB(D) = X*`. The search stops because there are finitely many sets and
 none is inserted twice.
@@ -435,14 +456,14 @@ All runs on one 4-core machine, Python 3.13, OR-tools 9.15.
 
 **Agreement with the oracle** (`python -m pytest -q`):
 
-- `tests/test_exact.py`: 296 random instances from `network_solver.generate`, sizes
-  3×3 to 10×10, 1–3 ports, 2–7 cities, `k` from 1 to 4, blocked fractions 0 to 0.5.
-  142 of the first 224 have blocked cells, 105 have a tie group with a real choice, 38
-  have positive optimal excess and 3 are infeasible. `exact` and CP-SAT agree on all of
-  them, and so do the hand-built families.
+- `tests/test_exact.py`: 296 random instances from `network_solver.generate`, 12
+  different sizes from 3×3 to 10×10, 1–3 ports, 2–7 cities, `k` from 1 to 4, blocked
+  fractions 0 to 0.5. Of the 296, 214 have blocked cells, 113 have a tie group with a
+  real choice, 38 have positive optimal excess and 3 are infeasible. `exact` and CP-SAT
+  agree on all of them, and so do the hand-built families.
 - `tests/test_brute.py`: 42 instances with at most 13 grid edges. `brute`, `exact` and
   CP-SAT agree on all of them.
-- `lean/TrainNetwork/Brute/CrossCheck.lean`: 24 tiny instances on which the Lean
+- `lean/TrainNetwork/Brute/CrossCheck.lean`: 25 tiny instances on which the Lean
   solver, run inside Lean, agrees with the Python solvers (checked at build time).
 - `python scripts/stress_exact.py` (not part of the test-suite, about two minutes):
   2451 further random instances, sizes up to 9×9, up to 4 ports and 7 cities. 85 are
@@ -450,9 +471,11 @@ All runs on one 4-core machine, Python 3.13, OR-tools 9.15.
   and CP-SAT agree on all of them. One more instance was skipped because `exact`
   exceeded its 20 s limit.
 
-**Scaling of `exact`.** On 15 random instances of size 10×10 and 12×12 with 4 ports, 8
-cities and `k = 4` (16 pairs), 12 finished within 30 s (0.01 s to 11 s) and 3 did not.
-CP-SAT needed at most 0.9 s on each. This is the exponential behaviour one expects.
+**Scaling of `exact`** (`python scripts/scaling_exact.py`). On 15 fixed random
+instances of size 10×10 and 12×12 with 4 ports, 8 cities and `k = 4` (16 pairs), `exact`
+proved the optimal excess on all 15, finished the tile search within 30 s on 12 (0.00 s
+to 5.2 s) and did not finish it on 3. CP-SAT needed at most 0.6 s on each. This is the
+exponential behaviour one expects from step 3.
 
 **`data/instances/europe.json`** (49×55, 1546 open cells, 2933 grid edges, 1333
 crossroads, 54 chosen pairs).
@@ -496,6 +519,17 @@ only.
   proof shows that every feasible solution has such a twin with the same cost. Python
   edges are unordered.
 
+### An inaccurate remark in the frozen `docs/problem.md`
+
+`docs/problem.md` says: "Edges between two terminals are allowed but are never needed."
+The second half is not true when a port is adjacent to one of its chosen cities. On the
+2×2 map with the port at `(0, 0)`, the city at `(1, 0)` and `k = 1`, the only optimal
+network is the single port–city edge (cost `(0, 0)`); without it the excess is 2. This
+is a remark, not part of the definition. The definition itself, the verifier, the Lean
+encoding, CP-SAT, `exact`, `brute` and the Lean solver all allow such edges and agree
+on this instance (`tests/test_exact.py`, `CrossCheck.lean`). We changed nothing in the
+frozen files and report it only for the record.
+
 ## 9. Reproducing
 
 ```
@@ -503,5 +537,8 @@ pip install ortools pytest
 python -m pytest -q                                          # all cross-checks
 python -m network_solver solve data/instances/europe.json    # CP-SAT oracle
 python -m network_solver exact data/instances/europe.json --time-limit 3600
+python scripts/stress_exact.py                               # 2451 more instances
+python scripts/scaling_exact.py                              # exponential behaviour
+python scripts/lean_crosscheck.py > lean/TrainNetwork/Brute/CrossCheck.lean
 cd lean && lake exe cache get && lake build                  # T0; Goal.lean is not built
 ```

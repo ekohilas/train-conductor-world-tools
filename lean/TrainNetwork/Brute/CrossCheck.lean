@@ -54,6 +54,21 @@ def tie : Instance where
   cities_inBounds := by decide
 #guard bruteCost tie == some ((0 : ℕ∞), 1)
 
+def adjacent : Instance where
+  W := 2
+  H := 2
+  blocked := ∅
+  ports := {(0, 0)}
+  cities := {(1, 0)}
+  k := 1
+  k_pos := by decide
+  ports_cities := by decide
+  ports_unblocked := by decide
+  cities_unblocked := by decide
+  ports_inBounds := by decide
+  cities_inBounds := by decide
+#guard bruteCost adjacent == some ((0 : ℕ∞), 0)
+
 def detour : Instance where
   W := 3
   H := 3
