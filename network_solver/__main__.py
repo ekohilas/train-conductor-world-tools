@@ -2,6 +2,7 @@
 
   python -m network_solver extract            # rebuild data/instances/europe.json from the Tiled map
   python -m network_solver solve INSTANCE [--out SOLUTION] [--time-limit S] [--log]
+  python -m network_solver solve-dp INSTANCE [--mode pruned|verbatim] [--time-limit S] [--out SOLUTION]
   python -m network_solver verify INSTANCE SOLUTION
 """
 from __future__ import annotations
@@ -11,7 +12,7 @@ import json
 import pathlib
 import sys
 
-from network_solver import cpsat, verify
+from network_solver import cpsat, layerdp, verify
 from network_solver.instance import Instance, Solution, from_tiled_map
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -28,6 +29,12 @@ def main(argv: list[str] | None = None) -> int:
     so.add_argument("--time-limit", type=float, default=600.0)
     so.add_argument("--workers", type=int, default=8)
     so.add_argument("--log", action="store_true")
+    dp = sub.add_parser("solve-dp")
+    dp.add_argument("instance")
+    dp.add_argument("--mode", choices=("pruned", "verbatim"), default="pruned")
+    dp.add_argument("--time-limit", type=float, default=None)
+    dp.add_argument("--out")
+    dp.add_argument("--verbose", action="store_true")
     ve = sub.add_parser("verify")
     ve.add_argument("instance")
     ve.add_argument("solution")
@@ -43,6 +50,19 @@ def main(argv: list[str] | None = None) -> int:
     inst = Instance.load(args.instance)
     if args.cmd == "solve":
         sol, stats = cpsat.solve(inst, time_limit=args.time_limit, workers=args.workers, log=args.log)
+        print(json.dumps(stats))
+        if sol is None:
+            return 1
+        report = verify.check(inst, sol)
+        print("verify:", f"OK excess={report.excess} tiles={report.tiles}" if report.ok else report.errors)
+        if args.out:
+            with open(args.out, "w", encoding="utf-8") as f:
+                json.dump(sol.to_json(inst), f, indent=1)
+        return 0 if report.ok else 1
+
+    if args.cmd == "solve-dp":
+        sol, stats = layerdp.solve(inst, mode=args.mode, time_limit=args.time_limit,
+                                   verbose=args.verbose)
         print(json.dumps(stats))
         if sol is None:
             return 1
