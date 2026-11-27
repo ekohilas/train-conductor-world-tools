@@ -448,6 +448,13 @@ oracle (`network_solver.decide.decide_cpsat`, built on `network_solver.cpsat`) a
 yes, and every model decodes to a network that `network_solver.verify` accepts within
 the bounds. No disagreement.
 
+**Python vs Lean.** The Python generator is the same reduction as the verified one, not
+just a similar one: on two small instances (one with a blocked cell, two ports and two
+cities) the clause list printed by Lean from `toK` (`lean/Check/CompareWithPython.lean`)
+equals the output of `to_sat` clause by clause, in the same order and with the same
+variable numbers. `test_matches_lean_reduction` pins the digests, the clause counts and
+`KInstance.size`.
+
 **RST → Train** (`tests/test_steiner_reduction.py`). 300 random point sets (2–5 points
 in boxes up to 5 × 5). Yes side: the network of Claim 2, built by `steiner.witness`,
 passes the verifier with at most `K(RST(A))` tiles. No side: an independent

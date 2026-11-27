@@ -112,8 +112,7 @@ theorem sat_edgeAt (v u : Cell) :
   unfold edgeAt
   rw [sat_ite, sat_append, sat_ite, sat_ite]
   simp only [Bool.and_eq_true, isOpenB_iff, isFreeB_iff, sat_cons, sat_nil, cTrue_cons,
-    cTrue_nil, lTrue_neg, lTrue_pos, or_false, and_true, not_true_eq_false,
-    not_false_eq_true, implies_true]
+    cTrue_nil, lTrue_neg, lTrue_pos, or_false, and_true, implies_true]
   constructor
   · rintro ⟨h1, h2⟩
     refine ⟨h2, fun hv hu he => ⟨fun hf => ?_, fun hf => ?_⟩⟩

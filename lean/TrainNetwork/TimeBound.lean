@@ -455,7 +455,7 @@ theorem toKgen_time_raw (I : Instance) (X K : ℕ) :
       n * (n * (n * 1)) * (11 * n * Q M) := Nat.mul_le_mul_right _ l6
   have m9 : (tileItemsM (cells I)).val.length * (11 * n * Q M) ≤ n * (11 * n * Q M) :=
     Nat.mul_le_mul_right _ (by omega)
-  simp only [toKgen, bind_time, bind_val, pure_time, tickN_time, cellsM_val, hp, hc]
+  simp only [toKgen, bind_time, pure_time, tickN_time, cellsM_val, hp, hc]
   unfold bRaw
   omega
 
