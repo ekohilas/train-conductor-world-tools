@@ -873,9 +873,9 @@ def _pruned_run(grid: _Grid, family: dict, reqs: dict, budget: int, final: bool,
         new: dict[int, int] = {}
         back: dict[int, int] = {}
         get = new.get
-        count = 0
+        work = 0  # transitions done since the last guard check
 
-        def outcomes(key: int) -> tuple[list, list, list]:
+        def outcomes(key: int) -> tuple[list, list, list, int]:
             if row:
                 uid = key & _SLOT_MASK
                 lid = key >> _SLOT_BITS
@@ -900,7 +900,7 @@ def _pruned_run(grid: _Grid, family: dict, reqs: dict, budget: int, final: bool,
                     counted.append((bits, delta, count))
                 else:
                     plain.append((bits, delta))
-            return plain, counted, special
+            return plain, counted, special, 1 + len(raw)
 
         if split:
             low_mask = (1 << (row * _SLOT_BITS)) - 1
@@ -941,7 +941,7 @@ def _pruned_run(grid: _Grid, family: dict, reqs: dict, budget: int, final: bool,
             outs = memo.get(key)
             if outs is None:
                 outs = memo[key] = outcomes(key)
-            plain, counted, special = outs
+            plain, counted, special, weight = outs
             rest = s & clear
             for bits, delta in plain:
                 c2 = c0 + delta
@@ -975,8 +975,9 @@ def _pruned_run(grid: _Grid, family: dict, reqs: dict, budget: int, final: bool,
                     if c2 < get(s2, limit):
                         new[s2] = c2
                         back[s2] = s
-            count += 1
-            if not count & 0xFFF:
+            work += weight
+            if work > 20000:
+                work = 0
                 ctl.check(len(new))
         table = new
         backs.append((t, back))
