@@ -35,7 +35,8 @@ Exact running times achieved:
 Runtimes on `data/instances/europe.json` (49 × 55, 6 ports, 23 cities, `k = 9`, so
 `m = 54`), measured on the 4-core container used for this work: see §8.2. In short,
 CP-SAT finds a solution of cost (excess 2, 210 tiles) but does not prove it optimal
-within its 600 s limit, and neither of my two algorithms finishes on this instance.
+within 600 s, nor within 1800 s, and neither of my two algorithms finishes on this
+instance. So the optimum of the real map is not known from this work.
 
 Against the acceptance criteria of the task:
 
@@ -624,7 +625,7 @@ run only on the 3 × 1 instance of `Goal.lean` (51 687 ticks).
 | Solver | Outcome | Time |
 |---|---|---|
 | CP-SAT, 4 workers, limit 600 s | feasible solution with excess 2 and 210 tiles. **Optimality not proved** (tile lower bound 104) | 600 s (limit reached) |
-| CP-SAT, 3 workers, limit 1800 s | CPSAT30_OUTCOME | CPSAT30_TIME |
+| CP-SAT, 3 workers, limit 1800 s | the same: excess 2 and 210 tiles, **optimality not proved** (tile lower bound still 104) | 1800 s (limit reached) |
 | Frontier (Algorithm B), `--max-states 2000000` | **did not finish.** Stopped at the state limit in the first round (slack 0, tie choice 1 of 8, 54 paths) at cell 554 of 2695, with 2 000 002 states | 21.3 s until it gave up |
 | Exhaustive (Algorithm A) | **not run.** The grid has 2933 edges, so there are `2^2933` networks per tie choice; the program refuses | — |
 
