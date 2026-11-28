@@ -72,4 +72,7 @@ Your result counts only if **all** of these hold:
   claim. Never present a partial result as the goal.
 - Work only on the branch that is checked out. Do not fetch, check out, diff against or
   read any other branch or tag, and push only to this branch.
-- Commit your work in small steps with clear messages.
+- Commit your work in small steps with clear messages, and push them to this branch as
+  you go.
+- Keep each individual response well under the output-token limit: write long proofs,
+  analysis and code to files in pieces, never in one message.
