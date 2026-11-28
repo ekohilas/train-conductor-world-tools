@@ -33,9 +33,18 @@ Exact running times achieved:
   `2^{O(√N·log N)}` when `|P|` and `|C|` are bounded.
 
 Runtimes on `data/instances/europe.json` (49 × 55, 6 ports, 23 cities, `k = 9`, so
-`m = 54`), measured on the 4-core container used for this work: see §8. In short, CP-SAT
-finds a solution of cost (excess 2, 210 tiles) but does not prove it optimal within its
-600 s limit, and neither of my two algorithms finishes on this instance.
+`m = 54`), measured on the 4-core container used for this work: see §8.2. In short,
+CP-SAT finds a solution of cost (excess 2, 210 tiles) but does not prove it optimal
+within its 600 s limit, and neither of my two algorithms finishes on this instance.
+
+Against the acceptance criteria of the task:
+
+| Criterion | Met? |
+|---|---|
+| 1. `lake build` succeeds with `Goal.lean` | **No.** It fails at `goal_quasipoly`. `lake build TrainNetwork.Partial` succeeds, with only the three standard axioms and no `sorry` |
+| 2. Every claimed algorithm is in `TimeM` and follows the auditing rule | Only Algorithm A (§3.4). Algorithm B is Python and paper only |
+| 3. Self-contained proof of the claim in this file | The goal has no proof. The partial statements A–D are proved here or in Lean |
+| 4. Python implementation, 200 random instances against CP-SAT, runtime on the real map | Yes for Algorithms A and B (§8), which do not achieve the goal |
 
 ## 1. Problem and notation
 
@@ -577,3 +586,112 @@ in this report.
    `2|E|` layers; the paper only says "a shortest walk repeats no cell".
 10. **Ties between optimal solutions.** Lean returns the first optimal candidate in its
     enumeration order; the paper does not fix which optimum is returned.
+
+## 8. Experiments
+
+All measurements were made in the container used for this work (4 cores, 15 GB RAM,
+Python 3.13, OR-Tools 9.15).
+
+### 8.1 Agreement with the CP-SAT oracle
+
+`tests/test_exact_algorithms.py` compares both Python implementations with
+`network_solver.cpsat` on instances from `network_solver.generate.random_instance`. For
+every instance the test requires the same feasibility verdict, requires CP-SAT to have
+proved optimality, runs the solution through `verify.check`, and requires the same cost
+`(excess, tiles)`.
+
+| | Frontier (Algorithm B) | Exhaustive (Algorithm A in Python) |
+|---|---|---|
+| random instances | 504 | 84 |
+| grid sizes | 26 different, from 3 × 3 to 12 × 9; 408 instances are at most 6 × 6 | 9 different, at most 16 grid edges |
+| with blocked cells | 350 | 24 |
+| with a tie at the `k`-th place | 149 | 13 |
+| infeasible | 34 | 6 |
+| positive optimal excess | 63 (largest 14) | 8 (largest 4) |
+| disagreements with CP-SAT | 0 | 0 |
+
+The exhaustive solver is also compared with the frontier solver on its 84 instances.
+Hand-written cases cover the 5 × 5 crossing instance (excess 2), a port next to its city
+(cost (0, 0)), plus-shaped corridors that are infeasible because the centre would need
+degree 4, a tie choice that changes the optimum, and a wide instance that is swept along
+its long side. The whole suite (`python -m pytest -q`) has 686 tests and takes about
+55 s.
+
+The Lean solver itself is not part of these tests. Its correctness is proved, and it was
+run only on the 3 × 1 instance of `Goal.lean` (51 687 ticks).
+
+### 8.2 Runtime on `data/instances/europe.json`
+
+| Solver | Outcome | Time |
+|---|---|---|
+| CP-SAT, 4 workers, limit 600 s | feasible solution with excess 2 and 210 tiles. **Optimality not proved** (tile lower bound 104) | 600 s (limit reached) |
+| CP-SAT, 3 workers, limit 1800 s | CPSAT30_OUTCOME | CPSAT30_TIME |
+| Frontier (Algorithm B), `--max-states 2000000` | **did not finish.** Stopped at the state limit in the first round (slack 0, tie choice 1 of 8, 54 paths) at cell 554 of 2695, with 2 000 002 states | 21.3 s until it gave up |
+| Exhaustive (Algorithm A) | **not run.** The grid has 2933 edges, so there are `2^2933` networks per tie choice; the program refuses | — |
+
+So neither of my algorithms solves the real map. On it the frontier roughly doubles with
+every cell of row 11, because 54 paths with independent positions multiply.
+
+### 8.3 Where the frontier program is practical
+
+Ten random instances per row (seeds 500–509, blocked fraction 0.15), with a limit of
+300 000 states. These runs are not part of the test suite.
+
+| Grid | Paths `m` | Finished | Hit the state limit | Longest finished run |
+|---|---|---|---|---|
+| 20 × 20 | 6 | 7 | 3 | 0.03 s |
+| 30 × 30 | 6 | 6 | 4 | 5.7 s |
+| 12 × 12 | 9 | 10 | 0 | 1.8 s |
+| 20 × 20 | 9 | 6 | 4 | 0.5 s |
+| 10 × 10 | 12 | 10 | 0 | 6.5 s |
+| 6 × 6 | 15 | 8 | 2 | 7.3 s |
+
+The cost is driven by the number of paths and by how much excess the optimum needs, as
+the bound `2^{O(m·w·log w)}` suggests. Proving infeasibility is the worst case, because
+it needs a sweep without the edge budget.
+
+## 9. How to check this report
+
+    # Lean: everything that is proved (succeeds)
+    cd lean && lake exe cache get && lake build TrainNetwork.Partial
+
+    # Lean: the frozen goal (fails at Goal.lean:46, Answer.quasipoly is not proved)
+    cd lean && lake build
+
+    # Python: all tests, including the comparisons with CP-SAT
+    python -m pytest -q
+
+    # Python: the two exact algorithms on one instance
+    python -m network_solver.exhaustive INSTANCE.json
+    python -m network_solver.frontier INSTANCE.json
+
+    # CP-SAT oracle on the real map
+    python -m network_solver solve data/instances/europe.json --time-limit 600
+
+## References
+
+Works cited in §6.2 and §6.4. The statements attributed to Bentert et al., Borradaile et
+al., Mari et al. and Pilipczuk et al. were checked against the papers' abstracts or text
+on 2026-11-28. The other entries are cited from memory and were not re-read.
+
+- A. Björklund, T. Husfeldt. *Shortest two disjoint paths in polynomial time.* ICALP 2014.
+- Y. Kobayashi, C. Sommer. *On shortest disjoint paths in planar graphs.* Discrete
+  Optimization 7(4), 2010.
+- É. Colin de Verdière, A. Schrijver. *Shortest vertex-disjoint two-face paths in planar
+  graphs.* ACM Transactions on Algorithms 7(2), 2011.
+- G. Borradaile, A. Nayyeri, F. Zafarani. *Towards single face shortest vertex-disjoint
+  paths in undirected planar graphs.* ESA 2015. <https://arxiv.org/abs/1507.05980>
+- S. Datta, S. Iyer, R. Kulkarni, A. Mukherjee. *Shortest k-disjoint paths via
+  determinants.* FSTTCS 2018.
+- M. Mari, A. Mukherjee, M. Pilipczuk, P. Sankowski. *Shortest disjoint paths on a grid.*
+  SODA 2024. <https://hal-lirmm.ccsd.cnrs.fr/lirmm-04834909v1>
+- M. Bentert, F. V. Fomin, P. A. Golovach, T. Korhonen, W. Lochet, F. Panolan,
+  M. S. Ramanujan, S. Saurabh, K. Simonov. *Packing short cycles.* 2024.
+  <https://arxiv.org/abs/2410.18878>. Its introduction states that for min-sum disjoint
+  paths with more than two pairs "the complexity of the problem is a long-standing open
+  problem" and that polynomial-time solvability for three pairs "remains open even on
+  planar graphs".
+- W. Lochet. *A polynomial time algorithm for the k-disjoint shortest paths problem.*
+  SODA 2021. <https://arxiv.org/abs/1912.10486>
+- M. Pilipczuk, G. Stamoulis, M. Włodarczyk. *Planar disjoint shortest paths is
+  fixed-parameter tractable.* 2025. <https://arxiv.org/abs/2505.03353>
