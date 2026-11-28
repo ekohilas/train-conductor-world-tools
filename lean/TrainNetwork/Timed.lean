@@ -547,8 +547,8 @@ choice of city lists, test feasibility, and keep the cheapest.
 
 The last step converts the winning edge list to a `Finset` (`Cand.toSolution`), which
 removes duplicates and so costs at most quadratically many comparisons in its length.
-The winner's edge list is a sublist of `ge` (`length_le_of_mem_subl`), so this is
-charged `ge.length ^ 2 + 1` ticks. The `choice` field of the result is a closure and
+The winner's edge list is no longer than `ge` (`best_allCands_edges_length_le`), so this
+is charged `ge.length ^ 2 + 1` ticks, after `3 * ge.length` ticks for measuring `ge`. The `choice` field of the result is a closure and
 costs nothing to build. -/
 def solveT (I : Instance) : TimeM (Option Solution) := do
   let cells ← I.cellsT

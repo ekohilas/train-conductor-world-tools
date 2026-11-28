@@ -181,9 +181,9 @@ This is exhaustive search, so the bound is exponential. It is **not** the bound 
 
 `lake build TrainNetwork.Partial` succeeds. `#print axioms` on `partial_correct`,
 `partial_exp_time`, `partial_reduction` and `partial_goal_of_generator` shows only
-`propext`, `Classical.choice`, `Quot.sound`. There is no `sorry`, `admit`, new `axiom`, `@[implemented_by]` or
-`@[extern]`, and the frozen files are untouched. `lake build` (which includes
-`Goal.lean`) fails with the single error
+`propext`, `Classical.choice`, `Quot.sound`. There is no `sorry`, `admit`, new `axiom`,
+`@[implemented_by]` or `@[extern]`, and the frozen files are untouched. `lake build`
+(which includes `Goal.lean`) fails with the single error
 `Goal.lean:46:2: Unknown identifier 'Answer.quasipoly'`.
 
 Charges, for the auditing rule of `Cost.lean`:
@@ -198,7 +198,7 @@ Charges, for the auditing rule of `Cost.lean`:
 | one entry scanned by `lookupT` | 4 |
 | comparing two costs and allocating the result in `betterT` | 6 |
 | building one candidate record | 1 |
-| converting the winning edge list to a `Finset` | `|ge|² + 1` (removing duplicates is quadratic; the winner is a sublist of `ge`) |
+| converting the winning edge list to a `Finset` | `3·|ge| + |ge|² + 1`: measuring `ge`, then a quadratic number of comparisons to remove duplicates; the winner's list is no longer than `ge` (`best_allCands_edges_length_le`). In `solveWith` the charge uses the winner's own length |
 
 The `choice` field of the returned solution is a closure and is not evaluated by the
 solver.

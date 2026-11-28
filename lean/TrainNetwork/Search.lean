@@ -274,6 +274,17 @@ theorem allCands_complete (I : Instance) : Complete I (allCands I) := by
   simp only [allCands, List.mem_flatMap, List.mem_map]
   exact ⟨_, filter_mem_subl _ _, _, map_mem_choicesL f (fun p => filter_mem_subl _ _) _, rfl⟩
 
+/-- The winner of the exhaustive search has an edge list no longer than `gridEdgesL`.
+This is what the final `tickN` of `solveT` (in `Timed.lean`) pays for. -/
+theorem best_allCands_edges_length_le (I : Instance) {c : Cand} {k : ℕ × ℕ}
+    (h : best I (allCands I) = some (c, k)) : c.edges.length ≤ I.gridEdgesL.length := by
+  have hg := best_good I (allCands I)
+  rw [h] at hg
+  have hmem := hg.1
+  simp only [allCands, List.mem_flatMap, List.mem_map] at hmem
+  obtain ⟨E, hE, ch, -, rfl⟩ := hmem
+  exact length_le_of_mem_subl _ _ hE
+
 /-- The exhaustive solver, as a pure function. -/
 def solvePure (I : Instance) : Option Solution := solveFrom I (allCands I)
 
