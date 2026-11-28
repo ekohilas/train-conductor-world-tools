@@ -26,7 +26,9 @@ def main(argv: list[str] | None = None) -> int:
     so.add_argument("instance")
     so.add_argument("--out")
     so.add_argument("--time-limit", type=float, default=600.0)
-    so.add_argument("--workers", type=int, default=8)
+    so.add_argument("--workers", type=int, default=8,
+                    help="CP-SAT worker threads; keep at 8 or more, even on fewer cores, "
+                         "or optimality proofs can stall")
     so.add_argument("--log", action="store_true")
     ve = sub.add_parser("verify")
     ve.add_argument("instance")

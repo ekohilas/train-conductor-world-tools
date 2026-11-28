@@ -36,6 +36,10 @@ found [here](https://github.com/ekohilas/train-conductor-world-map).
 
 ## Network optimisation and complexity research
 
+**Results:** see [`docs/results.md`](docs/results.md). The problem is NP-complete, it
+is solvable faster than exponential time with few ports and cities, and the real map's
+optimal network (210 tiles) is in `data/train-conductor-world.optimal.tmx`.
+
 The problem of laying out the cheapest track network is defined formally in
 [`docs/problem.md`](docs/problem.md). The definition is frozen and shared by the solver,
 the verifier and the Lean formalisation.
@@ -45,6 +49,9 @@ the verifier and the Lean formalisation.
   exact CP-SAT solver. It minimises total excess path length first, then track tiles.
 * `python -m network_solver verify data/instances/europe.json solution.json`: an
   independent checker.
+* `python -m network_solver.tmx_tracks check [map.tmx]`: verify the `tracks` layer of a
+  Tiled map against the rules; `export SOLUTION.json OUT.tmx` writes a solution into a
+  copy of the map.
 * `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
 * `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
 * `prompts/`: a ladder of research prompts (run easiest first), plus a review checklist.

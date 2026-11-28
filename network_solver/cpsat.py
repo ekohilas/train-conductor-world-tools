@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import collections
 import time
+import warnings
 
 from ortools.sat.python import cp_model
 
@@ -119,6 +120,14 @@ def _build(instance: Instance, reqs: dict[str, PortRequirement], slack: int):
     return model, select, edge_vars, sum(excess_terms), sum(tile_vars), sum(detours)
 
 
+# CP-SAT picks its portfolio of search strategies from the worker count. Below 8 workers
+# it drops the LP-heavy ones (max_lp, reduced_costs, quick_restart), and on the real map
+# the tile lower bound then stalls at 104 instead of reaching the optimum 210: with 8
+# workers the optimum is proved in about 5 minutes, with 4 never within 30. Workers are
+# threads, so 8 is fine on a 4-core machine.
+MIN_EFFECTIVE_WORKERS = 8
+
+
 def _run(model: cp_model.CpModel, time_limit: float, workers: int, log: bool):
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = time_limit
@@ -132,6 +141,13 @@ def solve(instance: Instance, time_limit: float = 600.0, workers: int = 8,
           log: bool = False, slack: int = 2) -> tuple[Solution | None, dict]:
     """Returns (solution, stats). stats['optimal'] is True only if both phases proved
     optimality and the slack certificate (excess <= slack) holds."""
+    if workers < MIN_EFFECTIVE_WORKERS:
+        warnings.warn(
+            f"cpsat.solve with workers={workers}: below {MIN_EFFECTIVE_WORKERS} CP-SAT omits "
+            "its LP-based strategies and may be unable to prove optimality (see the "
+            "MIN_EFFECTIVE_WORKERS comment).",
+            stacklevel=2,
+        )
     reqs = requirements(instance)
     start = time.perf_counter()
     good = (cp_model.OPTIMAL, cp_model.FEASIBLE)

@@ -111,3 +111,24 @@ def test_port_next_to_city_uses_direct_edge():
     sol, stats = cpsat.solve(inst, time_limit=30)
     report = verify.check(inst, sol)
     assert report.ok and (report.excess, report.tiles) == (0, 0)
+
+
+def test_tmx_export_round_trip(tmp_path):
+    # The stored optimal Europe solution, written as Tiled tiles and read back, must give
+    # the same network and the same verified cost.
+    import json
+    import pathlib
+
+    from network_solver import tmx_tracks
+
+    root = pathlib.Path(__file__).resolve().parent.parent
+    inst = Instance.load(root / "data/instances/europe.json")
+    sol = Solution.from_json(json.loads((root / "data/instances/europe.solution.json").read_text()))
+    out = tmp_path / "optimal.tmx"
+    tmx_tracks.write_tracks(tmx_tracks.TMX, out, tmx_tracks.solution_to_grid(inst, sol))
+    edges, problems = tmx_tracks.grid_to_edges(inst, tmx_tracks.read_tracks(out))
+    assert problems == []
+    terminal_edges = {e for e in sol.edges if all(c in inst.terminals for c in e)}
+    assert edges == sol.edges - terminal_edges
+    _, report = tmx_tracks.best_report(inst, edges)
+    assert report.ok and (report.excess, report.tiles) == (2, 210)
