@@ -218,6 +218,112 @@ containing its answer (this converse is not formalised). The exhaustive generato
 satisfies 1 and 2, but its list has length `2^{Θ(N)}`. I do not know a generator
 satisfying 3.
 
+## 4. Algorithm B: a frontier dynamic program (paper proof, Python)
+
+Algorithm B is exact and subexponential for bounded terminals. It is implemented in
+`network_solver/frontier.py` and has a paper proof only.
+
+### 4.1 The algorithm
+
+Fix a selection `S` with pairs `j = 1, …, m`, `j = (p_j, c_j)`. By Theorem 1 it suffices
+to minimise the additive cost `(Σ_j |R_j|, #free cells used)` over admissible routings
+by simple paths.
+
+Order the cells `v_1, …, v_N` row by row if `W ≤ H`, and column by column otherwise. Let
+`w = min(W, H)`. After step `t` the cells `v_1, …, v_t` are *processed*, and the
+*frontier* `F_t` is the set of grid edges with exactly one processed end. `|F_t| ≤ w + 1`.
+
+For a simple path `R_j` and a step `t`, the edges of `R_j` with at least one processed
+end form, among the processed cells, a set of disjoint subpaths (*fragments*). Each end
+of a fragment is either a frontier edge (a *plug*) or one of `p_j`, `c_j`. The *trace*
+of `R_j` at step `t` records which frontier edges are plugs, which two plugs belong to
+the same fragment, and which plug belongs to the fragment containing `p_j` (tag `S`) and
+which to the one containing `c_j` (tag `T`). A *state* is a tuple of `m` traces. There
+are at most `(w + 4)^{w+1}` traces, so at most `(w+4)^{m(w+1)}` states per step.
+
+The transition at cell `v = v_{t+1}` chooses, for every pair `j`, the set of edges of
+`v` used by `R_j`, subject to:
+
+- the edges from `v` to processed cells are used by `j` exactly when they are plugs of
+  `j`;
+- if `v` is blocked, or a terminal other than `p_j` and `c_j`, then `j` uses no edge;
+- if `v ∈ {p_j, c_j}`, then `j` uses exactly one edge;
+- if `v` is free, then `j` uses 0 or 2 edges, and at most 3 of the 4 edges of `v` are
+  used by at least one pair;
+- a new edge leads to an open cell that is free or an end of `j`;
+- joining two plugs of the same fragment is forbidden (it would close a cycle); when the
+  `S` fragment meets the `T` fragment the path is complete and must have no other plug.
+
+The cost of a transition is the number of (pair, new edge) incidences, and one tile if
+`v` is free and used. Each state keeps the lexicographically smallest cost. After
+`v_N` the frontier is empty, and the state in which every path is complete holds the
+optimum for `S`. The algorithm takes the best result over all selections.
+
+### 4.2 Correctness and running time
+
+**Theorem 2.** For a fixed selection `S`, the dynamic program computes
+`min_R (Σ_j |R_j|, #free cells used)` over the admissible routings `R` by simple paths,
+and reports "none" iff there is none. Its running time is
+`(w+4)^{m(w+1)} · 3^m · N^{O(1)} = 2^{O(m·w·log w)} · N^{O(1)}`. Over all selections
+the factor is at most `2^{|P|·|C|}`. Hence, for `|P| ≤ 10` and `|C| ≤ 40`, the Train
+Network Problem is solved exactly in time `2^{O(√N · log N)}`.
+
+*Proof.* Call a sequence of transitions from the initial state a *run*, and for a run
+of length `t` let `F_j` be the set of edges it chose for pair `j`.
+
+*Invariant.* For every run of length `t` ending in state `σ` with cost `(a, b)`:
+(i) in `F_j`, every processed free cell has degree 0 or 2, the cells `p_j`, `c_j` have
+degree 1 if processed, and every other processed cell has degree 0; (ii) `F_j` contains
+no cycle, and the trace of `j` in `σ` describes the components of `F_j` among the
+processed cells as stated above; (iii) `a = Σ_j |F_j|` and `b` is the number of
+processed free cells used by some `F_j`; (iv) every processed free cell has at most 3
+edges in `⋃_j F_j`. Each rule of the transition maintains one of these items; a cycle
+could only arise by joining two plugs of one fragment, which is forbidden.
+
+*Runs give routings.* For an accepting run of length `N`, (i) and (ii) say that `F_j`
+is a graph without cycles in which `p_j` and `c_j` have degree 1 and all other cells
+degree 0 or 2. Such a graph is a single simple path from `p_j` to `c_j`. Its interior
+cells are free by (i). By (iv) the routing is admissible, and by (iii) its cost is
+`(a, b)`.
+
+*Routings give runs.* Let `R` be an admissible routing by simple paths. The choices
+"edges of `R_j` at `v_{t+1}`" satisfy every transition rule: `R_j` uses one edge at its
+ends, two at its interior cells, which are free, and none elsewhere; it has no cycle;
+and when its two tagged fragments meet, all of `R_j` is processed. The resulting run is
+accepting and has the cost of `R`.
+
+Costs add up along runs, and the lexicographic order is compatible with addition, so
+keeping the smallest cost per state gives the smallest cost of an accepting run. The
+number of states per step is at most `(w+4)^{m(w+1)}` and each has at most `3^m`
+transitions, which gives the running time. Finally `w ≤ √N`. ∎
+
+### 4.3 Pruning in the implementation
+
+`frontier.py` restricts the search without changing the result. With a slack `X`:
+
+- **Corridors.** Pair `j` may use a cell `u` only if
+  `d(p_j, u) + d(u, c_j) ≤ d(p_j, c_j) + X`. A simple path `R_j` through `u` has length
+  at least `d(p_j, u) + d(u, c_j)`, so a routing of total excess at most `X` only uses
+  corridor cells.
+- **Edge budget.** A state is dropped if its edges so far plus a lower bound on the
+  edges every path still needs exceed `Σ_j d(j) + X`. A routing of total excess at most
+  `X` never exceeds this budget.
+- **Completed paths.** A completed path starts no new fragment. Such a fragment could
+  only ever close into a cycle.
+
+So with slack `X` the program finds the best routing among a set of routings that
+contains all those of total excess at most `X`. *Certificate:* if the best routing found
+has excess `x ≤ X`, it is optimal, because any strictly better routing has excess at
+most `x ≤ X` and would have been found. The outer loop starts with a small `X`, and
+repeats with `X ← max(2X, x)` (or `2X` if nothing was found) until the certificate
+holds. Once `X ≥ W·H` the corridors exclude no simple path. If still nothing is found,
+the program runs once more without the edge budget, and reports the instance infeasible
+if that also finds nothing. This is the same scheme as in `cpsat.py`. It adds a factor
+`O(log N)` to the bound of Theorem 2.
+
+The state space grows with the product of the corridors of all pairs, so the program is
+practical only for few pairs on small grids (§8).
+
 ## 5. Theorem 3: optimal networks have boundedly many junctions
 
 This section is a paper proof. It is not formalised in Lean and not used by either
