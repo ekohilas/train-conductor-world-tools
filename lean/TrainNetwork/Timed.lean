@@ -533,8 +533,13 @@ def choicesT (sub : List (List Cell)) : List Cell → TimeM (List (List (Cell ×
 /-! ### The solver -/
 
 /-- The exhaustive solver in `TimeM`: enumerate every edge subset of the grid and every
-choice of city lists, test feasibility, and keep the cheapest. The final conversion of
-the winning edge list to a `Finset` is charged quadratically in its length. -/
+choice of city lists, test feasibility, and keep the cheapest.
+
+The last step converts the winning edge list to a `Finset` (`Cand.toSolution`), which
+removes duplicates and so costs at most quadratically many comparisons in its length.
+The winner's edge list is a sublist of `ge` (`length_le_of_mem_subl`), so this is
+charged `ge.length ^ 2 + 1` ticks. The `choice` field of the result is a closure and
+costs nothing to build. -/
 def solveT (I : Instance) : TimeM (Option Solution) := do
   let cells ← I.cellsT
   let ge ← I.gridEdgesT cells
@@ -545,16 +550,12 @@ def solveT (I : Instance) : TimeM (Option Solution) := do
   let chs ← choicesT cs ports
   let r ← foldlT (fun acc E =>
     foldlT (fun acc ch => betterT I ge ports cities acc ⟨E, ch⟩) acc chs) none es
-  match r with
-  | none => do
-    tick
-    pure none
-  | some (c, _) => do
-    tickN (c.edges.length * c.edges.length + 1)
-    pure (some c.toSolution)
+  let n ← lengthT ge
+  tickN (n * n + 1)
+  pure (r.map (fun x => x.1.toSolution))
 
 theorem solveT_val (I : Instance) : (solveT I).val = solvePure I := by
-  simp only [solveT, bind_val, Instance.cellsT_val, Instance.gridEdgesT_val,
+  simp only [solveT, bind_val, pure_val, Instance.cellsT_val, Instance.gridEdgesT_val,
     Instance.portsT_val, Instance.citiesT_val, sublT_val, choicesT_val, foldlT_val,
     betterT_val]
   have hfold : (subl I.gridEdgesL).foldl (fun acc E =>
@@ -562,9 +563,6 @@ theorem solveT_val (I : Instance) : (solveT I).val = solvePure I := by
         (fun acc ch => better I acc ⟨E, ch⟩) acc) none = best I (allCands I) := by
     simp only [best, allCands, List.foldl_flatMap, List.foldl_map]
   rw [hfold]
-  unfold solvePure solveFrom
-  cases best I (allCands I) with
-  | none => rfl
-  | some r => rfl
+  rfl
 
 end TrainNetwork
