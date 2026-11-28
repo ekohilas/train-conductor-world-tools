@@ -100,7 +100,12 @@ with at most 2^m transitions per cell. For one tie choice and one slack the runn
 time is therefore 2^{O(m * min(W, H) * log min(W, H))} * poly(N), N = W * H; the slack
 loop multiplies this by O(log N).
 
-  python -m network_solver.frontier INSTANCE.json [--max-states N] [--out SOLUTION] [--quiet]
+  python -m network_solver.frontier INSTANCE.json [--max-states N] [--out SOLUTION]
+                                    [--quiet] [--progress-every SECONDS]
+
+prints the stats as one JSON line on stdout and checks the solution with `verify.check`.
+Progress lines go to stderr. If the state limit is hit, or the run is interrupted
+(Ctrl-C, or SIGTERM from `timeout`), the JSON line says how far the sweep got.
 """
 from __future__ import annotations
 
@@ -656,6 +661,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _interrupt(signum, frame):
+    signal.signal(signum, signal.SIG_IGN)  # `timeout` signals the process group as well
     raise KeyboardInterrupt
 
 
