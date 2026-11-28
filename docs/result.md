@@ -323,9 +323,8 @@ transitions, which gives the running time. Finally `w ≤ √N`. ∎
 So with slack `X` the program finds the best routing among a set of routings that
 contains all those of total excess at most `X`. *Certificate:* if the best routing found
 has excess `x ≤ X`, it is optimal, because any strictly better routing has excess at
-most `x ≤ X` and would have been found. The outer loop starts with a small `X`, and
-repeats with `X ← max(2X, x)` (or `2X` if nothing was found) until the certificate
-holds. Once `X ≥ W·H` the corridors exclude no simple path. If still nothing is found,
+most `x ≤ X` and would have been found. The outer loop runs `X = 0, 2, 4, 8, …` until
+the certificate holds. Once `X ≥ W·H` the corridors exclude no simple path. If still nothing is found,
 the program runs once more without the edge budget, and reports the instance infeasible
 if that also finds nothing. This is the same scheme as in `cpsat.py`. It adds a factor
 `O(log N)` to the bound of Theorem 2.
