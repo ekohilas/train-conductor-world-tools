@@ -20,7 +20,7 @@ Throughout, `N = W·H` is the number of grid cells, `|P| ≤ 10`, `|C| ≤ 40`, 
 | **Goal** | exact algorithm in time `2^{O(log^d N)}` | **not proved, not refuted** |
 | A | `Answer.solve` (exhaustive search) returns an optimal solution, or `none` exactly when the instance is infeasible | **machine-checked** (Lean, `Answer.correct`; this is the statement of `Goal.goal_correct`) |
 | A′ | `Answer.solve` runs in at most `2^{600·(N+1)}` steps of the frozen cost model | **machine-checked** (`Answer.exp_time`). Exponential, not quasi-polynomial |
-| A″ | any candidate list that dominates every feasible solution yields a correct solver | **machine-checked** (`solveFrom_correct`) |
+| A″ | any candidate list that dominates every feasible solution yields a correct solver; if such lists of small candidates can be generated in quasi-polynomial time and have quasi-polynomial length, both statements of `Goal.lean` follow | **machine-checked** (`solveFrom_correct`, `quasipoly_of_generator`). A reduction of the goal, not a proof: no such generator is known |
 | B | Theorem 1: the problem equals a routing problem on `m` simple paths with an additive cost | paper proof (§2) |
 | C | Theorem 2: an exact frontier dynamic program running in time `2^{O(m·w·log w)}·N^{O(1)}` per tie choice, `w = min(W,H)`; for bounded terminals this is `2^{O(√N·log N)}` | paper proof (§4), Python implementation tested against CP-SAT. **Subexponential, not quasi-polynomial** |
 | D | Theorem 3: some optimal network has at most `m(m−1)` free cells of degree 3; the problem reduces in `N^{O(1)}` time to a routing problem with a fixed pattern | paper proof (§5) |
@@ -167,11 +167,12 @@ This is exhaustive search, so the bound is exponential. It is **not** the bound 
 | `Timed.lean` | the `TimeM` program and `…_val` lemmas |
 | `TimeBound.lean` | `solveT_time_le` |
 | `Answer.lean` | `Answer.solve`, `Answer.correct`, `Answer.exp_time` (no `Answer.quasipoly`) |
+| `Reduction.lean` | `solveWith`, `quasipoly_of_generator` (§3.5) |
 | `Partial.lean` | the proved statements in the shape of `Goal.lean`, with `#print axioms` |
 
 `lake build TrainNetwork.Partial` succeeds. `#print axioms` on `partial_correct`,
-`partial_exp_time` and `partial_reduction` shows only `propext`, `Classical.choice`,
-`Quot.sound`. There is no `sorry`, `admit`, new `axiom`, `@[implemented_by]` or
+`partial_exp_time`, `partial_reduction` and `partial_goal_of_generator` shows only
+`propext`, `Classical.choice`, `Quot.sound`. There is no `sorry`, `admit`, new `axiom`, `@[implemented_by]` or
 `@[extern]`, and the frozen files are untouched. `lake build` (which includes
 `Goal.lean`) fails with the single error
 `Goal.lean:46:2: Unknown identifier 'Answer.quasipoly'`.
@@ -192,6 +193,28 @@ Charges, for the auditing rule of `Cost.lean`:
 
 The `choice` field of the returned solution is a closure and is not evaluated by the
 solver.
+
+### 3.5 What the goal reduces to (`quasipoly_of_generator`)
+
+The test, the cost and the search do not depend on how the candidates are produced.
+`Reduction.lean` defines `solveWith gen`, which searches the list produced by an
+arbitrary timed generator `gen : Instance → TimeM (List Cand)`, and proves:
+
+> **Theorem A″.** Let `gen`, `c₀`, `d₀` be such that for every instance `I` with at
+> most 10 ports and 40 cities
+> 1. every candidate of `(gen I).val` is small (its edge list and its choice lists have
+>    length at most about `32·I.size`; see `Small`),
+> 2. `(gen I).val` dominates every feasible solution of `I` (`Complete`),
+> 3. `(gen I).time ≤ 2^(c₀·(log₂ I.size + 1)^d₀)` and
+>    `(gen I).val.length ≤ 2^(c₀·(log₂ I.size + 1)^d₀)`.
+>
+> Then `solveWith gen` satisfies both statements of `Goal.lean`: it is correct, and
+> `(solveWith gen I).time ≤ 2^((c₀+122)·(log₂ I.size + 1)^(d₀+1))`.
+
+So the goal is equivalent in difficulty to finding such a generator: a
+quasi-polynomially long list of networks that is guaranteed to contain an optimal one.
+The exhaustive generator satisfies 1 and 2 but its list has length `2^{Θ(N)}`. I do not
+know a generator satisfying 3.
 
 ## 5. Theorem 3: optimal networks have boundedly many junctions
 
@@ -314,8 +337,8 @@ Either of the following would give the goal, and I could prove neither.
 
 - A quasi-polynomial algorithm for PR on patterns of bounded size (by Proposition 5.4).
 - A list of candidates of quasi-polynomial size, computable in quasi-polynomial time,
-  that dominates every feasible solution (by the machine-checked `solveFrom_correct`,
-  plus the polynomial cost per candidate proved in `TimeBound.lean`).
+  that dominates every feasible solution (by the machine-checked
+  `quasipoly_of_generator`, §3.5).
 
 ### 6.2 The obstacle
 
@@ -416,7 +439,8 @@ in this report.
 
 ## 7. Differences between the Lean proof and the paper proofs
 
-1. **Scope.** Lean proves only Theorems A, A′ and A″ (§3). Theorems 1, 2 and 3,
+1. **Scope.** Lean proves only Theorems A, A′ and A″ (§3). Theorem A″ has no paper
+   counterpart other than its statement in §3.5. Theorems 1, 2 and 3,
    Proposition 5.4 and Observation 6.1 have paper proofs only. Algorithm B (§4) exists
    only in Python.
 2. **Size parameter.** Lean uses `I.size = W·H + 1`. The bound proved is

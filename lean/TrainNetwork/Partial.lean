@@ -9,6 +9,7 @@ bound that holds for the exhaustive solver. Build it with
 `Goal.lean` itself fails to build, because `Answer.quasipoly` does not exist.
 -/
 import TrainNetwork.Answer
+import TrainNetwork.Reduction
 
 namespace TrainNetwork.Partial
 
@@ -56,8 +57,28 @@ theorem partial_reduction (I : Instance) (cs : List Cand) (h : Complete I cs) :
     | none => ¬ ∃ σ : Solution, σ.Feasible I :=
   solveFrom_correct I cs h
 
+/-- PROVED. Both statements of `Goal.lean` would follow from a generator that produces,
+in quasi-polynomial time, a quasi-polynomially long complete list of small candidates.
+No such generator is known; this theorem only says what is missing. -/
+theorem partial_goal_of_generator (gen : Instance → TimeM (List Cand)) (c₀ d₀ : ℕ)
+    (hsmall : ∀ I : Instance, ∀ c ∈ (gen I).val, Small (32 * I.size) c)
+    (hcomplete : ∀ I : Instance, I.ports.card ≤ 10 → I.cities.card ≤ 40 →
+      Complete I (gen I).val)
+    (htime : ∀ I : Instance, I.ports.card ≤ 10 → I.cities.card ≤ 40 →
+      (gen I).time ≤ 2 ^ (c₀ * (Nat.log 2 I.size + 1) ^ d₀))
+    (hlength : ∀ I : Instance, I.ports.card ≤ 10 → I.cities.card ≤ 40 →
+      (gen I).val.length ≤ 2 ^ (c₀ * (Nat.log 2 I.size + 1) ^ d₀)) :
+    (∀ I : Instance, I.ports.card ≤ 10 → I.cities.card ≤ 40 →
+      match (solveWith gen I).val with
+      | some σ => IsOptimal I σ
+      | none => ¬ ∃ σ : Solution, σ.Feasible I) ∧
+    ∃ c d : ℕ, ∀ I : Instance, I.ports.card ≤ 10 → I.cities.card ≤ 40 →
+      (solveWith gen I).time ≤ 2 ^ (c * (Nat.log 2 I.size + 1) ^ d) :=
+  quasipoly_of_generator gen c₀ d₀ hsmall hcomplete htime hlength
+
 #print axioms partial_correct
 #print axioms partial_exp_time
 #print axioms partial_reduction
+#print axioms partial_goal_of_generator
 
 end TrainNetwork.Partial
