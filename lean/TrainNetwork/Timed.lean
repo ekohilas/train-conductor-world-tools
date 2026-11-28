@@ -1,18 +1,24 @@
 /-
 `TimeM` implementations of the functions of `Exec.lean` and `Search.lean`.
 
-Cost accounting (see the auditing rule in `Cost.lean`):
+Cost accounting (see the auditing rule in `Cost.lean`). The charges are deliberately
+generous, so that every primitive operation has a tick of its own:
 
-* Every list combinator below (`filterT`, `mapT`, `allT`, `foldlT`, `flatMapT`, `memT`,
-  `dedupT`, `lengthT`, `appendT`, `sumT`, `rangeT`) is a structural recursion that
-  charges at least one `tick` per element visited, in addition to the cost of the
-  function it applies.
-* Comparing two cells is charged 2 ticks (two comparisons of natural numbers).
+* Every list combinator below (`filterT`, `mapT`, `allT`, `foldlT`, `flatMapT`,
+  `appendT`, `lengthT`, `sumT`, `dedupT`, `rangeT`) is a structural recursion that
+  charges 3 ticks per element visited (the recursive call, the allocation of at most one
+  list cell, and at most one further arithmetic or Boolean operation), in addition to
+  the cost of the function it applies.
+* Comparing two cells is charged 2 ticks (two comparisons of natural numbers). `memT c`
+  charges `c + 2` per element: `c` for the comparison, 1 for the recursive call and 1
+  for the Boolean `or`.
 * A membership test in one of the instance's finsets (`blocked`, `ports`, `cities`) is
   charged `I.size` ticks. These sets lie inside the grid, so they have fewer than
-  `I.size` elements, and a linear scan costs at most that many cell comparisons.
+  `I.size` elements (`Instance.card_blocked_lt` etc. in `TimeBound.lean`), and a linear
+  scan costs at most that many cell comparisons.
 * Every other pure expression between ticks is O(1) work on a bounded number of
-  natural numbers, Booleans or constructors, and is preceded by a `tick`/`tickN`.
+  natural numbers, Booleans or constructors, and is preceded by a `tick`/`tickN` that
+  counts its primitive operations.
 
 For every timed function `fT` there is a lemma `fT_val` stating that its value is the
 pure function `f` of `Exec.lean`/`Search.lean`. Running times are bounded in
@@ -37,11 +43,11 @@ section Combinators
 
 variable {α β : Type}
 
-/-- `List.filter` with a timed predicate; one extra tick per element. -/
+/-- `List.filter` with a timed predicate; 3 extra ticks per element. -/
 def filterT (p : α → TimeM Bool) : List α → TimeM (List α)
   | [] => pure []
   | a :: l => do
-    tick
+    tickN 3
     let b ← p a
     let r ← filterT p l
     pure (if b then a :: r else r)
@@ -52,11 +58,11 @@ def filterT (p : α → TimeM Bool) : List α → TimeM (List α)
   | a :: l => by
     simp only [filterT, bind_val, pure_val, filterT_val p l, List.filter_cons]
 
-/-- `List.map` with a timed function; one extra tick per element. -/
+/-- `List.map` with a timed function; 3 extra ticks per element. -/
 def mapT (f : α → TimeM β) : List α → TimeM (List β)
   | [] => pure []
   | a :: l => do
-    tick
+    tickN 3
     let b ← f a
     let r ← mapT f l
     pure (b :: r)
@@ -66,11 +72,11 @@ def mapT (f : α → TimeM β) : List α → TimeM (List β)
   | [] => rfl
   | a :: l => by simp only [mapT, bind_val, pure_val, mapT_val f l, List.map_cons]
 
-/-- `List.all` with a timed predicate (no short-circuit); one extra tick per element. -/
+/-- `List.all` with a timed predicate (no short-circuit); 3 extra ticks per element. -/
 def allT (p : α → TimeM Bool) : List α → TimeM Bool
   | [] => pure true
   | a :: l => do
-    tick
+    tickN 3
     let b ← p a
     let r ← allT p l
     pure (b && r)
@@ -80,11 +86,11 @@ def allT (p : α → TimeM Bool) : List α → TimeM Bool
   | [] => rfl
   | a :: l => by simp only [allT, bind_val, pure_val, allT_val p l, List.all_cons]
 
-/-- `List.foldl` with a timed step; one extra tick per element. -/
+/-- `List.foldl` with a timed step; 3 extra ticks per element. -/
 def foldlT (f : β → α → TimeM β) : β → List α → TimeM β
   | b, [] => pure b
   | b, a :: l => do
-    tick
+    tickN 3
     let b' ← f b a
     foldlT f b' l
 
@@ -93,11 +99,11 @@ def foldlT (f : β → α → TimeM β) : β → List α → TimeM β
   | [], b => rfl
   | a :: l, b => by simp only [foldlT, bind_val, foldlT_val f l, List.foldl_cons]
 
-/-- `l₁ ++ l₂`; one tick per element of `l₁`. -/
+/-- `l₁ ++ l₂`; 3 ticks per element of `l₁`. -/
 def appendT : List α → List α → TimeM (List α)
   | [], l₂ => pure l₂
   | a :: l₁, l₂ => do
-    tick
+    tickN 3
     let r ← appendT l₁ l₂
     pure (a :: r)
 
@@ -105,11 +111,11 @@ def appendT : List α → List α → TimeM (List α)
   | [], l₂ => rfl
   | a :: l₁, l₂ => by simp only [appendT, bind_val, pure_val, appendT_val l₁ l₂, List.cons_append]
 
-/-- `List.flatMap` with a timed function; one extra tick per element, plus the appends. -/
+/-- `List.flatMap` with a timed function; 3 extra ticks per element, plus the appends. -/
 def flatMapT (f : α → TimeM (List β)) : List α → TimeM (List β)
   | [] => pure []
   | a :: l => do
-    tick
+    tickN 3
     let x ← f a
     let r ← flatMapT f l
     appendT x r
@@ -120,11 +126,11 @@ def flatMapT (f : α → TimeM (List β)) : List α → TimeM (List β)
   | a :: l => by
     simp only [flatMapT, bind_val, appendT_val, flatMapT_val f l, List.flatMap_cons]
 
-/-- `List.length`; one tick per element. -/
+/-- `List.length`; 3 ticks per element. -/
 def lengthT : List α → TimeM ℕ
   | [] => pure 0
   | _ :: l => do
-    tick
+    tickN 3
     let n ← lengthT l
     pure (n + 1)
 
@@ -132,11 +138,11 @@ def lengthT : List α → TimeM ℕ
   | [] => rfl
   | a :: l => by simp only [lengthT, bind_val, pure_val, lengthT_val l, List.length_cons]
 
-/-- Sum of a list of naturals; one tick per element. -/
+/-- Sum of a list of naturals; 3 ticks per element. -/
 def sumT : List ℕ → TimeM ℕ
   | [] => pure 0
   | a :: l => do
-    tick
+    tickN 3
     let n ← sumT l
     pure (a + n)
 
@@ -144,12 +150,12 @@ def sumT : List ℕ → TimeM ℕ
   | [] => rfl
   | a :: l => by simp only [sumT, bind_val, pure_val, sumT_val l, List.sum_cons]
 
-/-- Membership test by linear scan (no short-circuit); `c` ticks per element, where `c`
-is the cost of comparing two elements. -/
+/-- Membership test by linear scan (no short-circuit); `c + 2` ticks per element, where
+`c` is the cost of comparing two elements. -/
 def memT [DecidableEq α] (c : ℕ) (a : α) : List α → TimeM Bool
   | [] => pure false
   | b :: l => do
-    tickN c
+    tickN (c + 2)
     let r ← memT c a l
     pure (decide (a = b) || r)
 
@@ -159,11 +165,11 @@ def memT [DecidableEq α] (c : ℕ) (a : α) : List α → TimeM Bool
   | b :: l => by
     simp only [memT, bind_val, pure_val, memT_val c a l, List.mem_cons, Bool.decide_or]
 
-/-- `List.dedup`; one tick plus one membership scan per element. -/
+/-- `List.dedup`; 3 ticks plus one membership scan per element. -/
 def dedupT [DecidableEq α] (c : ℕ) : List α → TimeM (List α)
   | [] => pure []
   | a :: l => do
-    tick
+    tickN 3
     let b ← memT c a l
     let r ← dedupT c l
     pure (if b then r else a :: r)
@@ -181,7 +187,7 @@ def dedupT [DecidableEq α] (c : ℕ) : List α → TimeM (List α)
 def rangeT : ℕ → TimeM (List ℕ)
   | 0 => pure []
   | n + 1 => do
-    tick
+    tickN 3
     let r ← rangeT n
     appendT r [n]
 
@@ -222,15 +228,15 @@ def isFreeT (c : Cell) : TimeM Bool := do
   let o ← I.isOpenT c
   let p ← I.memPortsT c
   let q ← I.memCitiesT c
-  tick
+  tickN 2
   pure (o && !p && !q)
 
 @[simp] theorem isFreeT_val (c : Cell) : (I.isFreeT c).val = I.isFreeB c := rfl
 
-/-- Adjacency test: a bounded number of arithmetic operations and comparisons on four
-natural numbers (charged 16), plus two openness tests. -/
+/-- Adjacency test: at most 4 additions and 6 comparisons on four natural numbers and a
+few Boolean connectives (charged 20), plus two openness tests. -/
 def gridAdjT (a b : Cell) : TimeM Bool := do
-  tickN 16
+  tickN 20
   let oa ← I.isOpenT a
   let ob ← I.isOpenT b
   pure (decide (Adjacent a b) && oa && ob)
@@ -245,9 +251,10 @@ def cellsT : TimeM (List Cell) := do
 @[simp] theorem cellsT_val : I.cellsT.val = I.cellsL := by
   simp [cellsT, cellsL]
 
-/-- The four potential neighbours: four arithmetic operations (charged 8). -/
+/-- The four potential neighbours: four arithmetic operations, four pairs and four
+list cells (charged 16). -/
 def nbr4T (a : Cell) : TimeM (List Cell) := do
-  tickN 8
+  tickN 16
   pure (nbr4 a)
 
 def gridEdgesT (cells : List Cell) : TimeM (List (Cell × Cell)) :=
@@ -294,15 +301,16 @@ def stepT (I : Instance) (E : List (Cell × Cell)) (first : Bool) (A : List Cell
     (A : List Cell) : (stepT I E first A).val = stepL I.isFreeB E first A := by
   simp [stepT, stepL]
 
-/-- Timed `distL`. -/
+/-- Timed `distL`. Each call is charged 4 ticks (the call, the test `i == 0`, the
+increment `i + 1` and the branch) plus the membership scan. -/
 def distT (I : Instance) (E : List (Cell × Cell)) (t : Cell) :
     ℕ → ℕ → List Cell → TimeM (Option ℕ)
   | 0, i, A => do
-    tick
+    tickN 4
     let m ← memT 2 t A
     pure (if m then some i else none)
   | f + 1, i, A => do
-    tick
+    tickN 4
     let m ← memT 2 t A
     if m then pure (some i) else do
       let A' ← stepT I E (i == 0) A
@@ -322,7 +330,7 @@ def distT (I : Instance) (E : List (Cell × Cell)) (t : Cell) :
 /-- Timed `netDistO`. -/
 def netDistT (I : Instance) (E : List (Cell × Cell)) (s t : Cell) : TimeM (Option ℕ) := do
   let n ← lengthT E
-  tick
+  tickN 3
   distT I E t (2 * n) 0 [s]
 
 @[simp] theorem netDistT_val (I : Instance) (E : List (Cell × Cell)) (s t : Cell) :
@@ -331,11 +339,12 @@ def netDistT (I : Instance) (E : List (Cell × Cell)) (s t : Cell) : TimeM (Opti
 
 /-! ### The feasibility test and the cost -/
 
-/-- Timed `lookupL`; one cell comparison per entry. -/
+/-- Timed `lookupL`; one cell comparison, one branch and one recursive call per entry
+(charged 4). -/
 def lookupT (p : Cell) : List (Cell × List Cell) → TimeM (List Cell)
   | [] => pure []
   | (q, S) :: r => do
-    tickN 2
+    tickN 4
     if q = p then pure S else lookupT p r
 
 @[simp] theorem lookupT_val (p : Cell) :
@@ -372,7 +381,7 @@ def degOKT (I : Instance) (E : List (Cell × Cell)) : TimeM Bool := do
     let nb ← nbrT E x
     let d ← dedupT 2 nb
     let n ← lengthT d
-    tick
+    tickN 2
     pure (!f || decide (n ≤ 3))) ends
 
 @[simp] theorem degOKT_val (I : Instance) (E : List (Cell × Cell)) :
@@ -397,7 +406,7 @@ def selOKT (I : Instance) (ge : List (Cell × Cell)) (cities S : List Cell) (p :
   let a ← allT I.memCitiesT S
   let d ← dedupT 2 S
   let n ← lengthT d
-  tick
+  tickN 2
   let b ← allT (fun x => do
     let g ← netDistT I ge p x
     tick
@@ -475,13 +484,14 @@ def costT (I : Instance) (ge : List (Cell × Cell)) (ports : List Cell) (c : Can
     (costT I I.gridEdgesL I.portsL c).val = costN I c := by
   simp [costT, costN]
 
-/-- Timed `better`. The comparison of two costs is charged 3 ticks. -/
+/-- Timed `better`. The comparison of two costs (three comparisons of naturals), the
+branch and the allocation of the result are charged 6 ticks. -/
 def betterT (I : Instance) (ge : List (Cell × Cell)) (ports cities : List Cell)
     (acc : Option (Cand × (ℕ × ℕ))) (c : Cand) : TimeM (Option (Cand × (ℕ × ℕ))) := do
   let f ← feasT I ge ports cities c
   if f then do
     let k ← costT I ge ports c
-    tickN 3
+    tickN 6
     match acc with
     | none => pure (some (c, k))
     | some (b, cb) => pure (if lexLe cb k then some (b, cb) else some (c, k))
@@ -503,10 +513,10 @@ def betterT (I : Instance) (ge : List (Cell × Cell)) (ports cities : List Cell)
 /-- Timed `subl`. -/
 def sublT {α : Type} : List α → TimeM (List (List α))
   | [] => do
-    tick
+    tickN 3
     pure [[]]
   | a :: l => do
-    tick
+    tickN 3
     let r ← sublT l
     let r' ← mapT (fun s => do tick; pure (a :: s)) r
     appendT r r'
@@ -518,12 +528,12 @@ def sublT {α : Type} : List α → TimeM (List (List α))
 /-- Timed `choicesL`. -/
 def choicesT (sub : List (List Cell)) : List Cell → TimeM (List (List (Cell × List Cell)))
   | [] => do
-    tick
+    tickN 3
     pure [[]]
   | p :: ps => do
-    tick
+    tickN 3
     let r ← choicesT sub ps
-    flatMapT (fun S => mapT (fun x => do tick; pure ((p, S) :: x)) r) sub
+    flatMapT (fun S => mapT (fun x => do tickN 2; pure ((p, S) :: x)) r) sub
 
 @[simp] theorem choicesT_val (sub : List (List Cell)) :
     ∀ ps : List Cell, (choicesT sub ps).val = choicesL sub ps
@@ -549,7 +559,9 @@ def solveT (I : Instance) : TimeM (Option Solution) := do
   let cs ← sublT cities
   let chs ← choicesT cs ports
   let r ← foldlT (fun acc E =>
-    foldlT (fun acc ch => betterT I ge ports cities acc ⟨E, ch⟩) acc chs) none es
+    foldlT (fun acc ch => do
+      tick
+      betterT I ge ports cities acc ⟨E, ch⟩) acc chs) none es
   let n ← lengthT ge
   tickN (n * n + 1)
   pure (r.map (fun x => x.1.toSolution))

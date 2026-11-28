@@ -36,10 +36,10 @@ theorem one_le_pow' {m : ℕ} (hm : 16 ≤ m) (i : ℕ) : 1 ≤ m ^ i :=
 
 /-- A loop over at most `m` elements with per-element cost at most `m ^ i`. -/
 theorem comb_le {m x c i : ℕ} (hm : 16 ≤ m) (hx : x ≤ m) (hc : c ≤ m ^ i) :
-    x * (c + 1) ≤ m ^ (i + 2) := by
+    x * (c + 3) ≤ m ^ (i + 2) := by
   have h1 : 1 ≤ m ^ i := one_le_pow' hm i
-  have h2 : c + 1 ≤ m ^ (i + 1) := lin_le_pow hm (by omega)
-  calc x * (c + 1) ≤ m * m ^ (i + 1) := Nat.mul_le_mul hx h2
+  have h2 : c + 3 ≤ m ^ (i + 1) := lin_le_pow hm (by omega)
+  calc x * (c + 3) ≤ m * m ^ (i + 1) := Nat.mul_le_mul hx h2
     _ = m ^ (i + 2) := by ring
 
 /-! ### Running times of the list combinators -/
@@ -49,13 +49,13 @@ section Combinators
 variable {α β : Type}
 
 theorem filterT_time_le (p : α → TimeM Bool) (c : ℕ) :
-    ∀ l : List α, (∀ a ∈ l, (p a).time ≤ c) → (filterT p l).time ≤ l.length * (c + 1)
+    ∀ l : List α, (∀ a ∈ l, (p a).time ≤ c) → (filterT p l).time ≤ l.length * (c + 3)
   | [], _ => by simp [filterT]
   | a :: l, h => by
     have ih := filterT_time_le p c l (fun a ha => h a (List.mem_cons_of_mem _ ha))
     have ha := h a List.mem_cons_self
-    have e : (l.length + 1) * (c + 1) = l.length * (c + 1) + (c + 1) := by ring
-    simp only [filterT, bind_time, tick_time, pure_time, List.length_cons, e]
+    have e : (l.length + 1) * (c + 3) = l.length * (c + 3) + (c + 3) := by ring
+    simp only [filterT, bind_time, tickN_time, pure_time, List.length_cons, e]
     omega
 
 theorem filterT_length_le (p : α → TimeM Bool) (l : List α) :
@@ -64,87 +64,89 @@ theorem filterT_length_le (p : α → TimeM Bool) (l : List α) :
   exact List.length_filter_le _ _
 
 theorem mapT_time_le (f : α → TimeM β) (c : ℕ) :
-    ∀ l : List α, (∀ a ∈ l, (f a).time ≤ c) → (mapT f l).time ≤ l.length * (c + 1)
+    ∀ l : List α, (∀ a ∈ l, (f a).time ≤ c) → (mapT f l).time ≤ l.length * (c + 3)
   | [], _ => by simp [mapT]
   | a :: l, h => by
     have ih := mapT_time_le f c l (fun a ha => h a (List.mem_cons_of_mem _ ha))
     have ha := h a List.mem_cons_self
-    have e : (l.length + 1) * (c + 1) = l.length * (c + 1) + (c + 1) := by ring
-    simp only [mapT, bind_time, tick_time, pure_time, List.length_cons, e]
+    have e : (l.length + 1) * (c + 3) = l.length * (c + 3) + (c + 3) := by ring
+    simp only [mapT, bind_time, tickN_time, pure_time, List.length_cons, e]
     omega
 
 theorem mapT_length (f : α → TimeM β) (l : List α) : (mapT f l).val.length = l.length := by
   rw [mapT_val, List.length_map]
 
 theorem allT_time_le (p : α → TimeM Bool) (c : ℕ) :
-    ∀ l : List α, (∀ a ∈ l, (p a).time ≤ c) → (allT p l).time ≤ l.length * (c + 1)
+    ∀ l : List α, (∀ a ∈ l, (p a).time ≤ c) → (allT p l).time ≤ l.length * (c + 3)
   | [], _ => by simp [allT]
   | a :: l, h => by
     have ih := allT_time_le p c l (fun a ha => h a (List.mem_cons_of_mem _ ha))
     have ha := h a List.mem_cons_self
-    have e : (l.length + 1) * (c + 1) = l.length * (c + 1) + (c + 1) := by ring
-    simp only [allT, bind_time, tick_time, pure_time, List.length_cons, e]
+    have e : (l.length + 1) * (c + 3) = l.length * (c + 3) + (c + 3) := by ring
+    simp only [allT, bind_time, tickN_time, pure_time, List.length_cons, e]
     omega
 
 theorem foldlT_time_le (f : β → α → TimeM β) (c : ℕ) :
     ∀ (l : List α) (b : β), (∀ b, ∀ a ∈ l, (f b a).time ≤ c) →
-      (foldlT f b l).time ≤ l.length * (c + 1)
+      (foldlT f b l).time ≤ l.length * (c + 3)
   | [], _, _ => by simp [foldlT]
   | a :: l, b, h => by
     have ih := foldlT_time_le f c l (f b a).val
       (fun b a ha => h b a (List.mem_cons_of_mem _ ha))
     have ha := h b a List.mem_cons_self
-    have e : (l.length + 1) * (c + 1) = l.length * (c + 1) + (c + 1) := by ring
-    simp only [foldlT, bind_time, tick_time, List.length_cons, e]
+    have e : (l.length + 1) * (c + 3) = l.length * (c + 3) + (c + 3) := by ring
+    simp only [foldlT, bind_time, tickN_time, List.length_cons, e]
     omega
 
-@[simp] theorem appendT_time : ∀ l₁ l₂ : List α, (appendT l₁ l₂).time = l₁.length
+@[simp] theorem appendT_time : ∀ l₁ l₂ : List α, (appendT l₁ l₂).time = 3 * l₁.length
   | [], l₂ => rfl
   | a :: l₁, l₂ => by
-    simp only [appendT, bind_time, tick_time, pure_time, appendT_time l₁ l₂,
+    simp only [appendT, bind_time, tickN_time, pure_time, appendT_time l₁ l₂,
       List.length_cons]
     omega
 
 theorem flatMapT_time_le (f : α → TimeM (List β)) (c d : ℕ) :
     ∀ l : List α, (∀ a ∈ l, (f a).time ≤ c) → (∀ a ∈ l, (f a).val.length ≤ d) →
-      (flatMapT f l).time ≤ l.length * (c + d + 1)
+      (flatMapT f l).time ≤ l.length * (c + 3 * d + 3)
   | [], _, _ => by simp [flatMapT]
   | a :: l, h, h' => by
     have ih := flatMapT_time_le f c d l (fun a ha => h a (List.mem_cons_of_mem _ ha))
       (fun a ha => h' a (List.mem_cons_of_mem _ ha))
     have ha := h a List.mem_cons_self
     have ha' := h' a List.mem_cons_self
-    have e : (l.length + 1) * (c + d + 1) = l.length * (c + d + 1) + (c + d + 1) := by ring
-    simp only [flatMapT, bind_time, tick_time, appendT_time, List.length_cons, e]
+    have e : (l.length + 1) * (c + 3 * d + 3) =
+        l.length * (c + 3 * d + 3) + (c + 3 * d + 3) := by ring
+    simp only [flatMapT, bind_time, tickN_time, appendT_time, List.length_cons, e]
     omega
 
-@[simp] theorem lengthT_time : ∀ l : List α, (lengthT l).time = l.length
+@[simp] theorem lengthT_time : ∀ l : List α, (lengthT l).time = 3 * l.length
   | [] => rfl
   | a :: l => by
-    simp only [lengthT, bind_time, tick_time, pure_time, lengthT_time l, List.length_cons]
+    simp only [lengthT, bind_time, tickN_time, pure_time, lengthT_time l, List.length_cons]
     omega
 
-@[simp] theorem sumT_time : ∀ l : List ℕ, (sumT l).time = l.length
+@[simp] theorem sumT_time : ∀ l : List ℕ, (sumT l).time = 3 * l.length
   | [] => rfl
   | a :: l => by
-    simp only [sumT, bind_time, tick_time, pure_time, sumT_time l, List.length_cons]
+    simp only [sumT, bind_time, tickN_time, pure_time, sumT_time l, List.length_cons]
     omega
 
 @[simp] theorem memT_time [DecidableEq α] (c : ℕ) (a : α) :
-    ∀ l : List α, (memT c a l).time = c * l.length
-  | [] => rfl
+    ∀ l : List α, (memT c a l).time = (c + 2) * l.length
+  | [] => by simp [memT]
   | b :: l => by
     simp only [memT, bind_time, tickN_time, pure_time, memT_time c a l, List.length_cons]
     ring
 
 theorem dedupT_time_le [DecidableEq α] (c : ℕ) :
-    ∀ l : List α, (dedupT c l).time ≤ l.length * (c * l.length + 1)
+    ∀ l : List α, (dedupT c l).time ≤ l.length * ((c + 2) * l.length + 3)
   | [] => by simp [dedupT]
   | a :: l => by
     have ih := dedupT_time_le c l
-    have e : (l.length + 1) * (c * (l.length + 1) + 1) =
-        l.length * (c * l.length + 1) + (c * l.length + 1) + (c * l.length + c) := by ring
-    simp only [dedupT, bind_time, tick_time, pure_time, memT_time, List.length_cons, e]
+    have e : (l.length + 1) * ((c + 2) * (l.length + 1) + 3) =
+        l.length * ((c + 2) * l.length + 3) + ((c + 2) * l.length + 3) +
+          ((c + 2) * l.length + (c + 2)) := by ring
+    simp only [dedupT, bind_time, tickN_time, pure_time, memT_time, List.length_cons, e]
     omega
 
 theorem dedupT_length_le [DecidableEq α] (c : ℕ) (l : List α) :
@@ -152,19 +154,20 @@ theorem dedupT_length_le [DecidableEq α] (c : ℕ) (l : List α) :
   rw [dedupT_val]
   exact (List.dedup_sublist l).length_le
 
-theorem rangeT_time_le : ∀ n : ℕ, (rangeT n).time ≤ n * (n + 1)
+theorem rangeT_time_le : ∀ n : ℕ, (rangeT n).time ≤ n * (3 * n + 3)
   | 0 => by simp [rangeT]
   | n + 1 => by
     have ih := rangeT_time_le n
-    have e : (n + 1) * (n + 1 + 1) = n * (n + 1) + (n + 1) + (n + 1) := by ring
-    simp only [rangeT, bind_time, tick_time, appendT_time, rangeT_val, List.length_range, e]
+    have e : (n + 1) * (3 * (n + 1) + 3) = n * (3 * n + 3) + (3 * n + 3) + (3 * n + 3) := by
+      ring
+    simp only [rangeT, bind_time, tickN_time, appendT_time, rangeT_val, List.length_range, e]
     omega
 
 /-- Quadratic loops over a list of length at most `m`. -/
 theorem dedupT_time_le_pow [DecidableEq α] {m : ℕ} (hm : 16 ≤ m) (l : List α)
     (hl : l.length ≤ m) : (dedupT 2 l).time ≤ m ^ 4 := by
   refine (dedupT_time_le 2 l).trans ?_
-  have h1 : 2 * l.length ≤ m ^ 2 := lin_le_sq hm (by omega)
+  have h1 : (2 + 2) * l.length ≤ m ^ 2 := lin_le_sq hm (by omega)
   exact comb_le hm hl h1
 
 
@@ -236,12 +239,12 @@ theorem card_cities_lt : I.cities.card < I.size := I.card_le_of_inBounds _ I.cit
   simp only [isOpenT, bind_time, tickN_time, memBlockedT_time, pure_time]
   omega
 
-@[simp] theorem isFreeT_time (c : Cell) : (I.isFreeT c).time = 3 * I.size + 3 := by
-  simp only [isFreeT, bind_time, isOpenT_time, memPortsT_time, memCitiesT_time, tick_time,
+@[simp] theorem isFreeT_time (c : Cell) : (I.isFreeT c).time = 3 * I.size + 4 := by
+  simp only [isFreeT, bind_time, isOpenT_time, memPortsT_time, memCitiesT_time, tickN_time,
     pure_time]
   omega
 
-@[simp] theorem gridAdjT_time (a b : Cell) : (I.gridAdjT a b).time = 2 * I.size + 20 := by
+@[simp] theorem gridAdjT_time (a b : Cell) : (I.gridAdjT a b).time = 2 * I.size + 24 := by
   simp only [gridAdjT, bind_time, tickN_time, isOpenT_time, pure_time]
   omega
 
@@ -259,12 +262,18 @@ theorem cellsT_time_le {m : ℕ} (hm : 32 * I.size ≤ m) : I.cellsT.time ≤ m 
     omega
   simp only [cellsT, bind_time, rangeT_val]
   have h1 : (rangeT I.W).time ≤ m ^ 3 :=
-    (rangeT_time_le I.W).trans (comb_le h16 hW (le_pow_one hW))
+    (rangeT_time_le I.W).trans (comb_le h16 hW (le_pow_one (by
+      have := I.W_le
+      have := I.WH_lt_size
+      omega)))
   have h2 : (rangeT I.H).time ≤ m ^ 3 :=
-    (rangeT_time_le I.H).trans (comb_le h16 hH (le_pow_one hH))
+    (rangeT_time_le I.H).trans (comb_le h16 hH (le_pow_one (by
+      have := I.H_le
+      have := I.WH_lt_size
+      omega)))
   have h3 : (flatMapT (fun x => mapT (fun y => do tick; pure (x, y)) (List.range I.H))
       (List.range I.W)).time ≤ m ^ 3 := by
-    refine (flatMapT_time_le _ (2 * I.H) I.H _ ?_ ?_).trans ?_
+    refine (flatMapT_time_le _ (4 * I.H) I.H _ ?_ ?_).trans ?_
     · intro x _
       refine (mapT_time_le _ 1 _ ?_).trans ?_
       · intro y _
@@ -274,7 +283,7 @@ theorem cellsT_time_le {m : ℕ} (hm : 32 * I.size ≤ m) : I.cellsT.time ≤ m 
     · intro x _
       rw [mapT_length, List.length_range]
     · rw [List.length_range]
-      have h4 : 2 * I.H + I.H ≤ m ^ 1 := by
+      have h4 : 4 * I.H + 3 * I.H ≤ m ^ 1 := by
         rw [pow_one]
         have := I.H_le
         have := I.WH_lt_size
@@ -287,14 +296,15 @@ theorem gridEdgesT_time_le {m : ℕ} (hm : 32 * I.size ≤ m) (cells : List Cell
   have h16 : 16 ≤ m := by
     have := I.WH_lt_size
     omega
+  have hsz : 1 ≤ I.size := Nat.succ_le_succ (Nat.zero_le _)
   unfold gridEdgesT
-  refine (flatMapT_time_le _ (m ^ 2 - 5) 4 _ ?_ ?_).trans ?_
+  refine (flatMapT_time_le _ (m ^ 2 - 15) 4 _ ?_ ?_).trans ?_
   · intro a _
     simp only [bind_time, nbr4T, tickN_time, pure_time, pure_val, bind_val]
-    have h1 : (filterT (fun b => I.gridAdjT a b) (nbr4 a)).time ≤ 4 * (2 * I.size + 20 + 1) :=
+    have h1 : (filterT (fun b => I.gridAdjT a b) (nbr4 a)).time ≤ 4 * (2 * I.size + 24 + 3) :=
       filterT_time_le _ _ _ (fun b _ => by simp)
     have h2 : (mapT (fun b => do tick; pure (a, b))
-        (filterT (fun b => I.gridAdjT a b) (nbr4 a)).val).time ≤ 4 * 2 := by
+        (filterT (fun b => I.gridAdjT a b) (nbr4 a)).val).time ≤ 4 * 4 := by
       refine (mapT_time_le _ 1 _ (fun b _ => by simp)).trans ?_
       have := filterT_length_le (fun b => I.gridAdjT a b) (nbr4 a)
       have h4 : (nbr4 a).length = 4 := rfl
@@ -311,7 +321,7 @@ theorem gridEdgesT_time_le {m : ℕ} (hm : 32 * I.size ≤ m) (cells : List Cell
   · have h3 : 16 * m ≤ m ^ 2 := by
       rw [pow_two]
       exact Nat.mul_le_mul_right _ h16
-    have h4 : m ^ 2 - 5 + 4 ≤ m ^ 2 := by omega
+    have h4 : m ^ 2 - 15 + 3 * 4 ≤ m ^ 2 := by omega
     exact comb_le h16 hc h4
 
 theorem portsT_time_le {m : ℕ} (hm : 32 * I.size ≤ m) (cells : List Cell)
@@ -355,20 +365,26 @@ theorem stepT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell)) (hE : E
     (A : List Cell) (hA : A.length ≤ m) (first : Bool) :
     (stepT I E first A).time ≤ m ^ 5 := by
   have h16 := m_ge hm
-  have hp : ∀ x : Cell, 2 * A.length + (3 * I.size + 3 + 1) ≤ m ^ 2 := fun _ =>
-    lin_le_sq h16 (by omega)
+  have hsz : 1 ≤ I.size := Nat.succ_le_succ (Nat.zero_le _)
   simp only [stepT, bind_time, appendT_time, mapT_length]
   calc _ ≤ m ^ 4 + (m ^ 4 + (m ^ 4 + (m ^ 4 + m ^ 4))) := by
         gcongr
         · refine filterT_time_pow h16 _ _ hE (fun e _ => ?_)
-          simpa using hp e.1
+          simp only [bind_time, memT_time, Instance.isFreeT_time, tick_time, pure_time]
+          exact lin_le_sq h16 (by omega)
         · refine le_pow_of_le h16 (mapT_time_pow (i := 0) h16 _ _
             ((filterT_length_le _ _).trans hE) (fun e _ => by simp)) (by omega)
         · refine filterT_time_pow h16 _ _ hE (fun e _ => ?_)
-          simpa using hp e.2
+          simp only [bind_time, memT_time, Instance.isFreeT_time, tick_time, pure_time]
+          exact lin_le_sq h16 (by omega)
         · refine le_pow_of_le h16 (mapT_time_pow (i := 0) h16 _ _
             ((filterT_length_le _ _).trans hE) (fun e _ => by simp)) (by omega)
-        · exact le_pow_of_le h16 (le_pow_one ((filterT_length_le _ _).trans hE)) (by omega)
+        · have := (filterT_length_le (fun e : Cell × Cell => do
+              let m ← memT 2 e.1 A
+              let f ← I.isFreeT e.1
+              tick
+              pure (m && (first || f))) E).trans hE
+          exact le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
     _ ≤ m ^ 5 := lin_le_pow h16 (by omega)
 
 theorem distT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell))
@@ -377,18 +393,18 @@ theorem distT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell))
       (distT I E t f i A).time ≤ (f + 1) * m ^ 6
   | 0, i, A, hA => by
     have h16 := m_ge hm
-    have h1 : 1 + 2 * A.length ≤ m ^ 6 :=
+    have h1 : 4 + (2 + 2) * A.length ≤ m ^ 6 :=
       le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
-    simp only [distT, bind_time, tick_time, memT_time, pure_time]
+    simp only [distT, bind_time, tickN_time, memT_time, pure_time]
     omega
   | f + 1, i, A, hA => by
     have h16 := m_ge hm
-    have h1 : 1 + 2 * A.length ≤ m ^ 5 :=
+    have h1 : 4 + (2 + 2) * A.length ≤ m ^ 5 :=
       le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
-    have h2 : 1 + 2 * A.length + m ^ 5 ≤ m ^ 6 := lin_le_pow h16 (by omega)
+    have h2 : 4 + (2 + 2) * A.length + m ^ 5 ≤ m ^ 6 := lin_le_pow h16 (by omega)
     have e : (f + 1 + 1) * m ^ 6 = (f + 1) * m ^ 6 + m ^ 6 := by ring
     have h0 : 0 ≤ (f + 1) * m ^ 6 := Nat.zero_le _
-    simp only [distT, bind_time, tick_time, memT_time, memT_val]
+    simp only [distT, bind_time, tickN_time, memT_time, memT_val]
     by_cases h : t ∈ A
     · simp only [h, decide_true, ↓reduceIte, pure_time, e]
       omega
@@ -406,14 +422,14 @@ theorem netDistT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell))
   have h1 : (2 * E.length + 1) * m ^ 6 ≤ m ^ 7 :=
     calc (2 * E.length + 1) * m ^ 6 ≤ m * m ^ 6 := Nat.mul_le_mul_right _ hE
       _ = m ^ 7 := by ring
-  have h2 : E.length + 1 ≤ m ^ 7 := le_pow_of_le h16 (le_pow_one (by omega)) (by omega)
-  simp only [netDistT, bind_time, lengthT_time, lengthT_val, tick_time]
+  have h2 : 3 * E.length + 3 ≤ m ^ 7 := le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
+  simp only [netDistT, bind_time, lengthT_time, lengthT_val, tickN_time]
   exact lin_le_pow h16 (by omega)
 
 /-! ### The feasibility test and the cost -/
 
 theorem lookupT_time_le (p : Cell) :
-    ∀ ch : List (Cell × List Cell), (lookupT p ch).time ≤ 2 * ch.length
+    ∀ ch : List (Cell × List Cell), (lookupT p ch).time ≤ 4 * ch.length
   | [] => by simp [lookupT]
   | (q, S) :: r => by
     have ih := lookupT_time_le p r
@@ -435,7 +451,7 @@ theorem endsT_time_le (hm : 16 ≤ m) (E : List (Cell × Cell)) (hE : E.length �
         gcongr
         · exact mapT_time_pow (i := 0) hm _ _ hE (fun e _ => by simp)
         · exact mapT_time_pow (i := 0) hm _ _ hE (fun e _ => by simp)
-        · exact le_pow_of_le hm (le_pow_one hE) (by omega)
+        · exact lin_le_sq hm (by omega)
     _ ≤ m ^ 3 := lin_le_pow hm (by omega)
 
 theorem length_nbrL_le (E : List (Cell × Cell)) (x : Cell) :
@@ -456,7 +472,10 @@ theorem nbrT_time_le (hm : 16 ≤ m) (E : List (Cell × Cell)) (hE : E.length �
         · exact filterT_time_pow (i := 1) hm _ _ hE (fun e _ => le_pow_one (by simp; omega))
         · exact le_pow_of_le hm (mapT_time_pow (i := 0) hm _ _
             ((filterT_length_le _ _).trans hE) (fun e _ => by simp)) (by omega)
-        · exact le_pow_of_le hm (le_pow_one ((filterT_length_le _ _).trans hE)) (by omega)
+        · have := (filterT_length_le (fun e : Cell × Cell => do
+              tickN 2
+              pure (decide (e.1 = x))) E).trans hE
+          exact le_pow_of_le hm (lin_le_sq hm (by omega)) (by omega)
     _ ≤ m ^ 4 := lin_le_pow hm (by omega)
 
 theorem degOKT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell))
@@ -469,14 +488,15 @@ theorem degOKT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell))
         · exact le_pow_of_le h16 (endsT_time_le h16 E hE') (by omega)
         · refine allT_time_pow (i := 5) h16 _ _ (by rw [length_endsL]; exact hE) (fun x _ => ?_)
           simp only [bind_time, Instance.isFreeT_time, nbrT_val, dedupT_val, lengthT_time,
-            tick_time, pure_time]
+            tickN_time, pure_time]
           have h1 := nbrT_time_le h16 E hE' x
           have h2 := dedupT_time_le_pow h16 (nbrL E x) ((length_nbrL_le E x).trans hE)
-          have h3 : (nbrL E x).dedup.length ≤ m ^ 4 :=
-            le_pow_of_le h16 (le_pow_one (((List.dedup_sublist _).length_le.trans
-              (length_nbrL_le E x)).trans hE)) (by omega)
-          have h4 : 3 * I.size + 3 + 1 ≤ m ^ 4 :=
-            le_pow_of_le h16 (le_pow_one (by omega)) (by omega)
+          have h3' := ((List.dedup_sublist (nbrL E x)).length_le.trans
+            (length_nbrL_le E x)).trans hE
+          have h3 : 3 * (nbrL E x).dedup.length ≤ m ^ 4 :=
+            le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
+          have h4 : 3 * I.size + 4 + 2 ≤ m ^ 4 :=
+            le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
           exact lin_le_pow h16 (by omega)
     _ ≤ m ^ 8 := lin_le_pow h16 (by omega)
 
@@ -492,25 +512,29 @@ theorem tilesT_time_le (hm : 32 * I.size ≤ m) (E : List (Cell × Cell))
         gcongr
         · exact le_pow_of_le h16 (endsT_time_le h16 E hE') (by omega)
         · exact le_pow_of_le h16 (filterT_time_pow (i := 1) h16 _ _ hl
-            (fun x _ => le_pow_one (by simp; omega))) (by omega)
+            (fun x _ => le_pow_one (by
+              have hsz : 1 ≤ I.size := Nat.succ_le_succ (Nat.zero_le _)
+              simp only [Instance.isFreeT_time]
+              omega))) (by omega)
         · exact dedupT_time_le_pow h16 _ ((List.length_filter_le _ _).trans hl)
-        · exact le_pow_of_le h16 (le_pow_one (((List.dedup_sublist _).length_le.trans
-            (List.length_filter_le _ _)).trans hl)) (by omega)
+        · have := ((List.dedup_sublist ((endsL E).filter fun a => (I.isFreeT a).val)).length_le.trans
+            (List.length_filter_le _ _)).trans hl
+          exact le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
     _ ≤ m ^ 5 := lin_le_pow h16 (by omega)
 
 theorem selOKT_time_le (hm : 32 * I.size ≤ m) (ge : List (Cell × Cell))
     (hge : 2 * ge.length + 1 ≤ m) (cities S : List Cell) (hc : cities.length ≤ m)
     (hS : S.length ≤ m) (p : Cell) : (selOKT I ge cities S p).time ≤ m ^ 14 := by
   have h16 := m_ge hm
-  simp only [selOKT, bind_time, dedupT_val, lengthT_time, tick_time, pure_time]
+  simp only [selOKT, bind_time, dedupT_val, lengthT_time, tickN_time, pure_time]
   calc _ ≤ m ^ 13 + (m ^ 13 + (m ^ 13 + (m ^ 13 + (m ^ 13 + (m ^ 13 + 0))))) := by
         gcongr
         · exact le_pow_of_le h16 (allT_time_pow (i := 1) h16 _ _ hS
             (fun x _ => le_pow_one (by simp; omega))) (by omega)
         · exact le_pow_of_le h16 (dedupT_time_le_pow h16 S hS) (by omega)
-        · exact le_pow_of_le h16 (le_pow_one ((List.dedup_sublist _).length_le.trans hS))
-            (by omega)
-        · exact one_le_pow' h16 13
+        · have := (List.dedup_sublist S).length_le.trans hS
+          exact le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
+        · exact le_pow_of_le h16 (le_pow_one (by omega)) (by omega)
         · refine le_pow_of_le h16 (allT_time_pow (i := 9) h16 _ _ hS (fun x _ => ?_)) (by omega)
           have := netDistT_time_le hm ge hge p x
           have h1 := one_le_pow' h16 8
@@ -520,7 +544,7 @@ theorem selOKT_time_le (hm : 32 * I.size ≤ m) (ge : List (Cell × Cell))
           refine allT_time_pow (i := 9) h16 _ _ hc (fun y _ => ?_)
           have h1 := netDistT_time_le hm ge hge p x
           have h2 := netDistT_time_le hm ge hge p y
-          have h3 : 2 * S.length + 2 ≤ m ^ 8 :=
+          have h3 : (2 + 2) * S.length + 2 ≤ m ^ 8 :=
             le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
           simp only [bind_time, memT_time, tickN_time, pure_time]
           exact lin_le_pow h16 (by omega)
@@ -560,7 +584,7 @@ theorem feasT_time_le (hm : 32 * I.size ≤ m) (ge : List (Cell × Cell))
           have h1 := lookupT_time_le q c.choice
           have h2 := selOKT_time_le hm ge hge cities (lookupL q c.choice) hc (hs.sel q) q
           have h3 := connOKT_time_le hm c.edges hs.edges (lookupL q c.choice) (hs.sel q) q
-          have h4 : 2 * c.choice.length + 1 ≤ m ^ 14 :=
+          have h4 : 4 * c.choice.length + 1 ≤ m ^ 14 :=
             le_pow_of_le h16 (lin_le_sq h16 (by have := hs.choice; omega)) (by omega)
           have h5 : m ^ 11 ≤ m ^ 14 := Nat.pow_le_pow_right (by omega) (by omega)
           exact lin_le_pow h16 (by omega)
@@ -590,11 +614,11 @@ theorem excessT_time_le (hm : 32 * I.size ≤ m) (ge : List (Cell × Cell))
             have h7 := one_le_pow' h16 8
             simp only [bind_time, tickN_time, pure_time]
             exact lin_le_pow h16 (by omega)
-          have h4 : 2 * c.choice.length + m ≤ m ^ 11 :=
+          have h4 : 4 * c.choice.length + 3 * m ≤ m ^ 11 :=
             le_pow_of_le h16 (lin_le_sq h16 (by have := hs.choice; omega)) (by omega)
           have h8 : m ^ 4 ≤ m ^ 11 := Nat.pow_le_pow_right (by omega) (by omega)
           exact lin_le_pow h16 (by omega)
-        · exact le_pow_of_le h16 (le_pow_one hp) (by omega)
+        · exact le_pow_of_le h16 (lin_le_sq h16 (by omega)) (by omega)
     _ ≤ m ^ 15 := lin_le_pow h16 (by omega)
 
 theorem costT_time_le (hm : 32 * I.size ≤ m) (ge : List (Cell × Cell))
@@ -634,15 +658,15 @@ end Check
 
 /-! ### Enumeration -/
 
-theorem sublT_time_le {α : Type} : ∀ l : List α, (sublT l).time + 3 ≤ 4 * 2 ^ l.length
+theorem sublT_time_le {α : Type} : ∀ l : List α, (sublT l).time + 6 ≤ 16 * 2 ^ l.length
   | [] => by simp [sublT]
   | a :: l => by
     have ih := sublT_time_le l
-    have h1 : (mapT (fun s => do tick; pure (a :: s)) (subl l)).time ≤ (subl l).length * (1 + 1) :=
+    have h1 : (mapT (fun s => do tick; pure (a :: s)) (subl l)).time ≤ (subl l).length * (1 + 3) :=
       mapT_time_le _ 1 _ (fun s _ => by simp)
     have h2 : 1 ≤ 2 ^ l.length := Nat.one_le_two_pow
-    have e : 4 * 2 ^ (l.length + 1) = 8 * 2 ^ l.length := by ring
-    simp only [sublT, bind_time, tick_time, sublT_val, appendT_time, List.length_cons, e]
+    have e : 16 * 2 ^ (l.length + 1) = 32 * 2 ^ l.length := by ring
+    simp only [sublT, bind_time, tickN_time, sublT_val, appendT_time, List.length_cons, e]
     rw [length_subl] at h1 ⊢
     omega
 
@@ -675,34 +699,35 @@ theorem lookupL_of_mem_choicesL (sub : List (List Cell)) :
 
 theorem choicesT_time_le (sub : List (List Cell)) (hs : 1 ≤ sub.length) :
     ∀ ps : List Cell,
-      (choicesT sub ps).time ≤ (ps.length + 1) * (5 * sub.length ^ ps.length)
+      (choicesT sub ps).time ≤ (ps.length + 1) * (14 * sub.length ^ ps.length)
   | [] => by simp [choicesT]
   | p :: ps => by
     have ih := choicesT_time_le sub hs ps
     have hX : 1 ≤ sub.length ^ ps.length := Nat.one_le_pow _ _ hs
-    have hf : (flatMapT (fun S => mapT (fun x => do tick; pure ((p, S) :: x))
+    have hf : (flatMapT (fun S => mapT (fun x => do tickN 2; pure ((p, S) :: x))
         (choicesL sub ps)) sub).time ≤
-        sub.length * (2 * sub.length ^ ps.length + sub.length ^ ps.length + 1) := by
+        sub.length * (5 * sub.length ^ ps.length + 3 * sub.length ^ ps.length + 3) := by
       refine flatMapT_time_le _ _ _ _ (fun S _ => ?_) (fun S _ => ?_)
-      · refine (mapT_time_le _ 1 _ (fun x _ => by simp)).trans ?_
+      · refine (mapT_time_le _ 2 _ (fun x _ => by simp)).trans ?_
         rw [length_choicesL]
         omega
       · rw [mapT_length, length_choicesL]
-    have e1 : sub.length * (2 * sub.length ^ ps.length + sub.length ^ ps.length + 1) =
-        3 * sub.length ^ (ps.length + 1) + sub.length := by ring
+    have e1 : sub.length * (5 * sub.length ^ ps.length + 3 * sub.length ^ ps.length + 3) =
+        8 * sub.length ^ (ps.length + 1) + 3 * sub.length := by ring
     have hXY : sub.length ^ ps.length ≤ sub.length ^ (ps.length + 1) :=
       Nat.pow_le_pow_right hs (Nat.le_succ _)
     have hsY : sub.length ≤ sub.length ^ (ps.length + 1) := by
       calc sub.length = 1 * sub.length := (one_mul _).symm
         _ ≤ sub.length ^ ps.length * sub.length := Nat.mul_le_mul_right _ hX
         _ = sub.length ^ (ps.length + 1) := by ring
-    have h3 : (ps.length + 1) * (5 * sub.length ^ ps.length) ≤
-        (ps.length + 1) * (5 * sub.length ^ (ps.length + 1)) :=
+    have h3 : (ps.length + 1) * (14 * sub.length ^ ps.length) ≤
+        (ps.length + 1) * (14 * sub.length ^ (ps.length + 1)) :=
       Nat.mul_le_mul_left _ (Nat.mul_le_mul_left _ hXY)
-    have e2 : (ps.length + 1 + 1) * (5 * sub.length ^ (ps.length + 1)) =
-        (ps.length + 1) * (5 * sub.length ^ (ps.length + 1)) +
-          5 * sub.length ^ (ps.length + 1) := by ring
-    simp only [choicesT, bind_time, tick_time, choicesT_val, List.length_cons, e2]
+    have e2 : (ps.length + 1 + 1) * (14 * sub.length ^ (ps.length + 1)) =
+        (ps.length + 1) * (14 * sub.length ^ (ps.length + 1)) +
+          14 * sub.length ^ (ps.length + 1) := by ring
+    have hY1 : 1 ≤ sub.length ^ (ps.length + 1) := Nat.one_le_pow _ _ hs
+    simp only [choicesT, bind_time, tickN_time, choicesT_val, List.length_cons, e2]
     rw [e1] at hf
     omega
 
@@ -773,14 +798,17 @@ theorem solveT_time_le (I : Instance) (hP : I.ports.card ≤ 10) (hC : I.cities.
     · simp [h]
     · exact (length_le_of_mem_subl _ _ h).trans hcl'
   -- the main loop
-  have t8 : (foldlT (fun acc E => foldlT (fun acc ch =>
+  have t8 : (foldlT (fun acc E => foldlT (fun acc ch => do
+      tick
       betterT I I.gridEdgesL I.portsL I.citiesL acc ⟨E, ch⟩) acc
         (choicesL (subl I.citiesL) I.portsL)) none (subl I.gridEdgesL)).time ≤
       (subl I.gridEdgesL).length *
-        ((choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1) + 1) := by
+        ((choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1 + 3) + 3) := by
     refine foldlT_time_le _ _ _ none (fun b E hE => ?_)
     refine foldlT_time_le _ _ _ b (fun b' ch hch => ?_)
-    exact betterT_time_le hm _ hge _ _ hpl' hcl' b' _ (hsmall E hE ch hch)
+    have := betterT_time_le hm _ hge _ _ hpl' hcl' b' _ (hsmall E hE ch hch)
+    simp only [bind_time, tick_time]
+    omega
   simp only [solveT, bind_time, Instance.cellsT_val, Instance.gridEdgesT_val,
     Instance.portsT_val, Instance.citiesT_val, sublT_val, choicesT_val, lengthT_time,
     lengthT_val, tickN_time, pure_time]
@@ -789,44 +817,44 @@ theorem solveT_time_le (I : Instance) (hP : I.ports.card ≤ 10) (hC : I.cities.
     (hpow 4).trans (two_pow_mono (by omega))
   have k3 : (32 * I.size) ^ 3 ≤ 2 ^ (23 * I.size + 497) :=
     (hpow 3).trans (two_pow_mono (by omega))
-  have k5 : 4 * 2 ^ I.gridEdgesL.length ≤ 2 ^ (23 * I.size + 497) := by
-    calc 4 * 2 ^ I.gridEdgesL.length = 2 ^ (I.gridEdgesL.length + 2) := by ring
+  have k5 : 16 * 2 ^ I.gridEdgesL.length ≤ 2 ^ (23 * I.size + 497) := by
+    calc 16 * 2 ^ I.gridEdgesL.length = 2 ^ (I.gridEdgesL.length + 4) := by ring
       _ ≤ 2 ^ (23 * I.size + 497) := two_pow_mono (by omega)
-  have k6 : 4 * 2 ^ I.citiesL.length ≤ 2 ^ (23 * I.size + 497) := by
-    calc 4 * 2 ^ I.citiesL.length = 2 ^ (I.citiesL.length + 2) := by ring
+  have k6 : 16 * 2 ^ I.citiesL.length ≤ 2 ^ (23 * I.size + 497) := by
+    calc 16 * 2 ^ I.citiesL.length = 2 ^ (I.citiesL.length + 4) := by ring
       _ ≤ 2 ^ (23 * I.size + 497) := two_pow_mono (by omega)
-  have k7 : (I.portsL.length + 1) * (5 * (subl I.citiesL).length ^ I.portsL.length) ≤
+  have k7 : (I.portsL.length + 1) * (14 * (subl I.citiesL).length ^ I.portsL.length) ≤
       2 ^ (23 * I.size + 497) := by
     have h1 : (subl I.citiesL).length ^ I.portsL.length ≤ 2 ^ 400 := by
       rw [← length_choicesL]
       exact hchs
-    calc (I.portsL.length + 1) * (5 * (subl I.citiesL).length ^ I.portsL.length)
-        ≤ 11 * (5 * 2 ^ 400) := Nat.mul_le_mul (by omega) (Nat.mul_le_mul_left _ h1)
-      _ = 11 * 5 * 2 ^ 400 := (Nat.mul_assoc 11 5 (2 ^ 400)).symm
-      _ ≤ 2 ^ 6 * 2 ^ 400 := Nat.mul_le_mul_right _ (by norm_num)
-      _ = 2 ^ (6 + 400) := (pow_add 2 6 400).symm
+    calc (I.portsL.length + 1) * (14 * (subl I.citiesL).length ^ I.portsL.length)
+        ≤ 11 * (14 * 2 ^ 400) := Nat.mul_le_mul (by omega) (Nat.mul_le_mul_left _ h1)
+      _ = 11 * 14 * 2 ^ 400 := (Nat.mul_assoc 11 14 (2 ^ 400)).symm
+      _ ≤ 2 ^ 8 * 2 ^ 400 := Nat.mul_le_mul_right _ (by norm_num)
+      _ = 2 ^ (8 + 400) := (pow_add 2 8 400).symm
       _ ≤ 2 ^ (23 * I.size + 497) := two_pow_mono (by omega)
   have k8 : (subl I.gridEdgesL).length *
-      ((choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1) + 1) ≤
+      ((choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1 + 3) + 3) ≤
       2 ^ (23 * I.size + 497) := by
-    have h1 : (32 * I.size) ^ 19 + 1 ≤ 2 ^ (19 * I.size + 96) := by
+    have h1 : (32 * I.size) ^ 19 + 1 + 3 ≤ 2 ^ (19 * I.size + 96) := by
       have := hpow 19
       have e : 2 ^ (19 * I.size + 96) = 2 ^ (19 * (I.size + 5)) + 2 ^ (19 * (I.size + 5)) := by
         rw [← two_mul, ← pow_succ']
         congr 1
-      have h0 : 1 ≤ 2 ^ (19 * (I.size + 5)) := Nat.one_le_two_pow
+      have h0 : 2 ^ 2 ≤ 2 ^ (19 * (I.size + 5)) := two_pow_mono (by omega)
       rw [e]
       omega
-    have h2 : (choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1) + 1 ≤
+    have h2 : (choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1 + 3) + 3 ≤
         2 ^ (19 * I.size + 497) := by
-      have h3 : (choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1) ≤
+      have h3 : (choicesL (subl I.citiesL) I.portsL).length * ((32 * I.size) ^ 19 + 1 + 3) ≤
           2 ^ (19 * I.size + 496) := by
         calc _ ≤ 2 ^ 400 * 2 ^ (19 * I.size + 96) := Nat.mul_le_mul hchs h1
           _ = 2 ^ (400 + (19 * I.size + 96)) := (pow_add 2 400 (19 * I.size + 96)).symm
           _ ≤ 2 ^ (19 * I.size + 496) := two_pow_mono (by omega)
       have e : 2 ^ (19 * I.size + 497) = 2 ^ (19 * I.size + 496) + 2 ^ (19 * I.size + 496) := by
         rw [← two_mul, ← pow_succ']
-      have h0 : 1 ≤ 2 ^ (19 * I.size + 496) := Nat.one_le_two_pow
+      have h0 : 2 ^ 2 ≤ 2 ^ (19 * I.size + 496) := two_pow_mono (by omega)
       rw [e]
       omega
     calc _ ≤ 2 ^ (4 * I.size) * 2 ^ (19 * I.size + 497) := by
@@ -836,11 +864,11 @@ theorem solveT_time_le (I : Instance) (hP : I.ports.card ≤ 10) (hC : I.cities.
       _ = 2 ^ (4 * I.size + (19 * I.size + 497)) :=
         (pow_add 2 (4 * I.size) (19 * I.size + 497)).symm
       _ ≤ 2 ^ (23 * I.size + 497) := two_pow_mono (by omega)
-  have k9 : I.gridEdgesL.length + (I.gridEdgesL.length * I.gridEdgesL.length + 1) ≤
+  have k9 : 3 * I.gridEdgesL.length + (I.gridEdgesL.length * I.gridEdgesL.length + 1) ≤
       2 ^ (23 * I.size + 497) := by
     have h1 : I.gridEdgesL.length * I.gridEdgesL.length ≤ (32 * I.size) * (32 * I.size) :=
       Nat.mul_le_mul (by omega) (by omega)
-    have h2 : (32 * I.size) * (32 * I.size) + (32 * I.size) + 1 ≤ (32 * I.size) ^ 3 := by
+    have h2 : (32 * I.size) * (32 * I.size) + 3 * (32 * I.size) + 1 ≤ (32 * I.size) ^ 3 := by
       have h3 : 16 * (32 * I.size) ^ 2 ≤ (32 * I.size) ^ 3 := by
         calc 16 * (32 * I.size) ^ 2 ≤ (32 * I.size) * (32 * I.size) ^ 2 :=
               Nat.mul_le_mul_right _ h16
