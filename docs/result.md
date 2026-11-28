@@ -211,10 +211,12 @@ arbitrary timed generator `gen : Instance → TimeM (List Cand)`, and proves:
 > Then `solveWith gen` satisfies both statements of `Goal.lean`: it is correct, and
 > `(solveWith gen I).time ≤ 2^((c₀+122)·(log₂ I.size + 1)^(d₀+1))`.
 
-So the goal is equivalent in difficulty to finding such a generator: a
-quasi-polynomially long list of networks that is guaranteed to contain an optimal one.
-The exhaustive generator satisfies 1 and 2 but its list has length `2^{Θ(N)}`. I do not
-know a generator satisfying 3.
+So the goal would follow from such a generator: a quasi-polynomially long list of
+networks that is guaranteed to contain an optimal one. Nothing is lost by this
+reformulation, since an exact quasi-polynomial algorithm would give the one-element list
+containing its answer (this converse is not formalised). The exhaustive generator
+satisfies 1 and 2, but its list has length `2^{Θ(N)}`. I do not know a generator
+satisfying 3.
 
 ## 5. Theorem 3: optimal networks have boundedly many junctions
 
