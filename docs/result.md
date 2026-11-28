@@ -350,11 +350,13 @@ Train Network Problem with bounded terminals is as hard as min-sum disjoint path
 
 1. **Guess the junctions, connect them by arbitrary grid-shortest paths.** This would be
    polynomial. It is wrong: a segment is shortest only in the complement of the other
-   segments. In a corridor layout where a vertical connection would have to cross a
-   horizontal one at a single cell, the vertical one must use a longer corridor that
-   avoids that cell, and this segment is not a shortest path of the grid between its
-   ends. And when a pair of cells has many shortest paths, the right ones must be chosen
-   jointly so that they stay disjoint.
+   segments. In the 7 × 5 instance of
+   `tests/test_structure_examples.py::test_segment_need_not_be_a_grid_shortest_path`
+   (a plus-shaped corridor system with one bypass), three required connections need all
+   four sides of the centre cell. The optimum has cost (8, 16): one port reaches its
+   city by a 12-edge bypass although their grid distance is 4, and that segment touches
+   nothing else. And when a pair of cells has many shortest paths, the right ones must be
+   chosen jointly so that they stay disjoint.
 2. **Midpoint recursion on the segments (Savitch).** Splitting each of the `O(1)`
    segments at its midpoint gives twice as many half-segments, which still have to be
    pairwise disjoint. Nothing becomes independent, so after `log N` levels one has

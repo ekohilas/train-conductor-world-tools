@@ -48,6 +48,22 @@ the verifier and the Lean formalisation.
 * `python -m pytest -q`: tests, including brute-force cross-checks of the solver.
 * `lean/`: Lean 4 + Mathlib formalisation (`cd lean && lake exe cache get && lake build`).
 
+### Complexity with few terminals: status
+
+[`docs/result.md`](docs/result.md) reports on the question "is there a quasi-polynomial
+exact algorithm for at most 10 ports and 40 cities?". **The answer was not found.** What
+exists:
+
+* `lean/TrainNetwork/Answer.lean`: a machine-checked exact solver (exhaustive search)
+  with a proved *exponential* time bound. `cd lean && lake build TrainNetwork.Partial`
+  builds everything that is proved. `lake build` fails at `Goal.lean`, on purpose,
+  because the quasi-polynomial bound `Answer.quasipoly` is not proved.
+* `python -m network_solver.exhaustive INSTANCE`: the same exhaustive search in Python
+  (tiny instances only).
+* `python -m network_solver.frontier INSTANCE`: an exact frontier dynamic program,
+  subexponential for a bounded number of terminals (small instances only).
+* `tests/test_exact_algorithms.py`: both are compared with the CP-SAT oracle.
+
 ## TODO
 
 * Add tests
